@@ -1,3 +1,5 @@
+<img src="icon.png" alt="Icon of BufferEncoder" width="200" height="200">
+
 # BufferEncoder
 A very efficient and simple-to-use encoder that turns tables into buffers.\
 Unlike other buffer serializers, BufferEncoder doesn't require you to define the structure of the buffer, and it supports all datatypes you'd normally have in a table.
@@ -15,22 +17,22 @@ List of all datatypes that can be encoded are in [this module](https://github.co
 
 # API
 ### Encoder.write(table, writestart, allowreferences, shiftseed) -> ( buffer, {any}? )
-Converts the given `table` into a buffer\
+Converts the given `table` into a buffer
 
 If `writestart` is provided, table content writing will begin from `writestart`\
 If `allowreferences` is enabled, It will return a table containing all the datatypes it was unable to encode\
 The returned table can be used in **Encoder.read()** to be read again when decoding the buffer.\
-If `shiftseed` is enabled, It will shift the byte used for the type of the value by a random value acquired using the seed\
+If `shiftseed` is enabled, It will shift the byte used for the type of the value by a random value acquired using the seed
 
 ---
 ### Encoder.read(buffer, readstart, references, shiftseed) -> { [any]: any }
 Converts the given `buffer` back into a table\
-Parameters should be consistent with **Encoder.write()** so that you don't encounter bugs\
+Parameters should be consistent with **Encoder.write()** so that you don't encounter bugs
 
 ---
-### Encoder.enums.register<T>(name, value: T?) -> T | userdata
+### Encoder.enums.register(name, value) -> any
 Registers `value` to be encoded, even if it is normally not encode-able\
-If value is not provided, it returns userdata created using **newproxy()**\
+If value is not provided, it returns userdata created using **newproxy()**
 
 The byte used to register the name value pair is synced with the client, so the same value can be sent between client & server via a remote if the value is defined to be the same on both ends
 
