@@ -22,10 +22,12 @@ If `allowreferences` is enabled, It will return a table containing all the datat
 The returned table can be used in **Encoder.read()** to be read again when decoding the buffer.\
 If `shiftseed` is enabled, It will shift the byte used for the type of the value by a random value acquired using the seed\
 
+---
 ### Encoder.read(buffer, readstart, references, shiftseed) -> { [any]: any }
 Converts the given `buffer` back into a table\
 Parameters should be consistent with **Encoder.write()** so that you don't encounter bugs\
 
+---
 ### Encoder.enums.register<T>(name, value: T?) -> T | userdata
 Registers `value` to be encoded, even if it is normally not encode-able\
 If value is not provided, it returns userdata created using **newproxy()**\
@@ -35,6 +37,7 @@ The byte used to register the name value pair is synced with the client, so the 
 > [!CAUTION]
 > This errors if the value is already registered and for certain values such as booleans, 0, 1, -1, "", math.huge, and NaN
 
+---
 ### Encoder.enums.remove(name)
 Removes the name value pair from the custom value registry
 
