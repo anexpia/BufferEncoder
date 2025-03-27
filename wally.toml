@@ -1,6 +1,8 @@
 [package]
 name = "anexpia/bufferencoder"
-version = "1"
+description = "A very efficient and simple-to-use encoder that turns tables into buffers."
+license = "GPL-3.0"
+version = "1.0.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
