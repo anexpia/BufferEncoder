@@ -1,0 +1,7 @@
+[package]
+name = "anexpia/bufferencoder"
+version = "1"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
