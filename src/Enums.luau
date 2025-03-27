@@ -12,8 +12,13 @@
 	its actually needed
 ]]
 
+
 local RS = game:GetService("RunService")
-local IsServer = RS:IsServer()
+
+local Settings = require(script.Parent.Settings)
+
+local SyncingEnabled = Settings.serverclientsyncing
+local IsSyncOrigin = if SyncingEnabled then RS:IsServer() else true
 
 local nametovalue: {[string]: any} = {}
 local bytetovalue: {[number]: any} = {
@@ -68,15 +73,18 @@ local function removename(name: string)
 			bytetovalue[oldbyte] = nil
 		end
 
-		if IsServer then
+		if IsSyncOrigin then
 			table.insert(freebytes, oldbyte)
 			nametovalue[name] = nil -- not done on client because this is called whenever the attribute is changed, and current value is needed
-			script:SetAttribute(name, nil)
+			
+			if SyncingEnabled then
+				script:SetAttribute(name, nil)
+			end
 		end
 	end
 end
 
-if RS:IsClient() then
+if not IsSyncOrigin then
 	local function attributechanged(name, byte)
 		removename(name)
 
@@ -118,11 +126,8 @@ return {
 	register = function(name: string, predefined: any?): any
 		name = sanitizename(name)
 
-		do
-			local old = valuetobyte[predefined]
-			if old and old > 0 then
-				error(`cannot define {name} with the value {predefined} as the value is a constant`, 0)
-			end
+		if valuetobyte[predefined] then
+			error(`cannot define {name} with the value {predefined} as the value is already defined`, 0)
 		end
 
 		if nametovalue[name] then
@@ -144,7 +149,7 @@ return {
 
 		local v = predefined or newproxy()
 
-		if IsServer then
+		if IsSyncOrigin then
 			local byte = table.remove(freebytes)
 
 			if byte then
@@ -156,7 +161,9 @@ return {
 			valuetobyte[v] = byte
 			bytetovalue[byte] = v
 
-			script:SetAttribute(name, byte)
+			if SyncingEnabled then
+				script:SetAttribute(name, byte)
+			end
 		else
 			nametovalue[name] = v
 		end

@@ -6,6 +6,8 @@ local t = {
     rbxenum_behavior = "compact" :: "full" | "compact";
 	stringsalwayslengthbound = true;
 	referencebitsize = 8;
+
+    serverclientsyncing = false;
 }
 
 for att, value in Encoder:GetAttributes() do 

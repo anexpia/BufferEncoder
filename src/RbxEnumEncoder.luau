@@ -94,38 +94,49 @@ elseif Settings.rbxenum_behavior == "compact" then
 	local enumitemarray: { EnumItem } = {}
 	local valuelookup: { [any]: number } = {}
 
-	if RS:IsServer() then
-		local request: RemoteFunction = script:FindFirstChild("request")
-		local tosend1, tosend2 = {}, {}
+	local SyncingEnabled = Settings.serverclientsyncing
+	local IsSyncOrigin = if SyncingEnabled then RS:IsServer() else true
 
-		if request == nil then
-			request = Instance.new("RemoteFunction")
-			request.Name = "request"
-			request.Parent = script
+	if IsSyncOrigin then
+		local tosend1, tosend2
+
+		if SyncingEnabled then
+			tosend1, tosend2 = {}, {}
+			local request: RemoteFunction = script:FindFirstChild("request")
+	
+			if request == nil then
+				request = Instance.new("RemoteFunction")
+				request.Name = "request"
+				request.Parent = script
+			end
+
+			request.OnServerInvoke = function(player, v)
+				return tosend1, tosend2
+			end
+		else 
+			tosend1, tosend2 = nil, nil
 		end
 
 		do
 			-- using tostring on index because the enum/enumitem may not exist
-			-- which will lead to gaps getting created
+			-- which will lead to gaps getting created when syncing
 
 			local enum_i, enumitem_i = 0, 0
 			for _, k in Enum:GetEnums() do
 				enum_i += 1
 				enumarray[enum_i] = k
 				valuelookup[k] = enum_i
-				tosend1[tostring(enum_i)] = k
+
+				if tosend1 then tosend1[tostring(enum_i)] = k end
 
 				for _, v in k:GetEnumItems() do
 					enumitem_i += 1
 					enumitemarray[enumitem_i] = v
 					valuelookup[v] = enumitem_i
-					tosend2[tostring(enumitem_i)] = v
+
+					if tosend2 then tosend2[tostring(enumitem_i)] = v end
 				end
 			end
-		end
-
-		request.OnServerInvoke = function(player, v)
-			return tosend1, tosend2
 		end
 	else
 		task.spawn(function()
