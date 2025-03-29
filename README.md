@@ -25,6 +25,9 @@ If `allowreferences` is enabled, It will return a table containing all the datat
 The returned table can be used in **Encoder.read()** for the values to be found when decoding the buffer.\
 If `shiftseed` is provided, It will shift the byte used for the type of the value by a random value acquired using the seed
 
+> [!WARNING]
+> If you really need to securely encrypt your buffer, do not rely on the shiftseed parameter.
+
 ---
 ### Encoder.read(buffer, readstart, references, shiftseed) -> { [any]: any }
 Converts the given `buffer` back into a table\
