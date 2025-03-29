@@ -5,23 +5,21 @@
 
 local Datatypes = require(script.Parent.ReadDatatypes)
 local Types = require(script.Parent.Types)
-local Settings = require(script.Parent.Settings)
-
-local readreference = buffer[`readu{Settings.referencebitsize}`]
-local referencesize = Settings.referencebitsize // 8
 
 --[[
 Decodes the buffer created by encoder.write()
 parameters should be consistent with encoder.write().
 ]]
-return function(buff: buffer, readstart: number?, references: { any }?, shiftby: number?): { [any]: any }
+return function(buff: buffer, readstart: number?, references: { any }?, shiftseed: number?): { [any]: any }
 	local cursor = readstart or 0
 	local isdoingdeduplication = false
 
 	do
 		local firstbyte = buffer.readu8(buff, cursor)
-		if shiftby then
-			firstbyte = (firstbyte - shiftby) % 128
+		if shiftseed then
+			math.randomseed(shiftseed)
+			firstbyte = (firstbyte - math.random(1, 127)) % 128
+			math.randomseed(shiftseed)
 		end
 
 		if firstbyte == 101 then
@@ -47,6 +45,7 @@ return function(buff: buffer, readstart: number?, references: { any }?, shiftby:
 	local info: Types.decodeinfo = {
 		stringform = nil,
 		deduplicationtable = nil :: any,
+		references = references,
 		tables = formedtables,
 	}
 
@@ -59,8 +58,8 @@ return function(buff: buffer, readstart: number?, references: { any }?, shiftby:
 			byte = (255 - byte)
 		end
 
-		if shiftby then
-			byte = (byte - shiftby) % 128
+		if shiftseed then
+			byte = (byte - math.random(1, 127)) % 128
 		end
 
 		local value: any
@@ -92,15 +91,12 @@ return function(buff: buffer, readstart: number?, references: { any }?, shiftby:
 
 				continue
 			else
+				if shiftseed then math.randomseed(os.time()) end
+				
 				return maintable
 			end
-		elseif byte == 50 then -- references
-			local index = readreference(buff, cursor)
-			cursor += referencesize
-			
-			value = (references :: { any })[index]
 		elseif byte == 101 then value = {}
-		elseif byte == 100 then
+		elseif byte == 4 then -- nil
 			-- can never be dict key
 			if lastwasdictkey then lastwasdictkey = false 
 			else currentindex += 1 end 
@@ -125,6 +121,8 @@ return function(buff: buffer, readstart: number?, references: { any }?, shiftby:
 			currenttable[currentindex] = value
 		end
 	end
+
+	if shiftseed then math.randomseed(os.time()) end
 
 	error("buffer is not terminated with zero byte", 0)
 end

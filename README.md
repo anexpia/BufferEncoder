@@ -7,11 +7,12 @@ Unlike other buffer serializers, BufferEncoder doesn't require you to define the
 # Features
 
 * Very optimized and space-efficient
-* Supports mixed tables and cyclic tables
+* Supports any type of table (array, dictionary, mixed), cyclic tables, and any value for keys in dictionaries
 * Supports encoding every datatype that you'd realistically put in a table
-* Can encode non-encodeable values into 2 bytes if registered beforehand
+* Can encode non-encodeable values into 2 bytes if registered beforehand using **encoder.enums.register()**
+* Deduplicates repeated tables, strings, numbers, vectors, and enumitems
 * Has simple encryption that relies on psuedo-random number generation
-* Fully typed and functions have descriptions.
+* Fully typed
 
 List of all datatypes that can be encoded are in [this module](https://github.com/anexpia/BufferEncoder/blob/main/src/init.luau)
 
@@ -21,8 +22,8 @@ Converts the given `table` into a buffer
 
 If `writestart` is provided, table content writing will begin from `writestart`\
 If `allowreferences` is enabled, It will return a table containing all the datatypes it was unable to encode\
-The returned table can be used in **Encoder.read()** to be read again when decoding the buffer.\
-If `shiftseed` is enabled, It will shift the byte used for the type of the value by a random value acquired using the seed
+The returned table can be used in **Encoder.read()** for the values to be found when decoding the buffer.\
+If `shiftseed` is provided, It will shift the byte used for the type of the value by a random value acquired using the seed
 
 ---
 ### Encoder.read(buffer, readstart, references, shiftseed) -> { [any]: any }
@@ -49,8 +50,6 @@ Settings can be changed by either changing them directly in the 'Settings' modul
 * rbxenum_behavior ("compact" or "full") - Changes how enumitems are encoded, defaults to 'false'.\
 Exact details of what each type does are inside [this module](https://github.com/anexpia/BufferEncoder/blob/main/src/init.luau)
 * color3always6bytes (boolean) - Sets whether Color3s are always encoded as float16 values, defaults to **false**.
-* stringsalwayslengthbound (boolean) - Disables encoding strings as zero-terminated strings if enabled, defaults to **true**
-* referencebitsize (number: 8, 16, or 32) - Defines how many bits are used to save position of references in the table, defaults to **8**
 * serverclientsyncing (boolean) - Determines whether to sync EnumItems and custom values from server to client, defaults to **false**
 
 # License

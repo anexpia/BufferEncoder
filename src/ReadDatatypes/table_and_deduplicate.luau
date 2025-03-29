@@ -11,13 +11,14 @@ type datatypedecodinginfo = Types.datatypedecodinginfo
 local tblu8byte = 51
 local tblu16byte = 52
 local tblu32byte = 53
-local dedupu8byte = 54
-local dedupu16byte = 55
-local dedupu32byte = 56
+local dedupu8byte = 57
+local dedupu16byte = 58
+local dedupu32byte = 59
+local referenceu8byte = 60
+local referenceu16byte = 61
+local referenceu32byte = 62
 
 local customvaluebyte = 99
-local nilbyte = 100
-local emptytablebyte = 101
 
 @native
 local function readtable(buff: buffer, byte: number, cursor: number, info: Types.decodeinfo)
@@ -50,6 +51,26 @@ local function readdeduplicate(buff: buffer, byte: number, cursor: number, info:
     return info.deduplicationtable[index], cursor
 end
 
+@native 
+local function readreference(buff: buffer, byte: number, cursor: number, info: Types.decodeinfo)
+    local index 
+			
+    if byte == referenceu8byte then index = buffer.readu8(buff, cursor); cursor += 1
+    elseif byte == referenceu16byte then index = buffer.readu16(buff, cursor); cursor += 2
+    else index = buffer.readu32(buff, cursor); cursor += 4 end
+    
+    local references = info.references
+
+    if references then
+        return references[index], cursor
+    elseif not info.didrefwarn then 
+        warn('Missing references table when decoding buffer that contains value references.') 
+        info.didrefwarn = true
+    end
+
+    return nil, cursor
+end
+
 local t = {
     [tblu8byte] = readtable;
     [tblu16byte] = readtable;
@@ -59,17 +80,14 @@ local t = {
     [dedupu16byte] = readdeduplicate;
     [dedupu32byte] = readdeduplicate;
 
+    [referenceu8byte] = readreference;
+    [referenceu16byte] = readreference;
+    [referenceu32byte] = readreference;
+
     [customvaluebyte] = @native function(buff: buffer, byte: number, cursor: number)
 		return ByteToValue[-buffer.readu8(buff, cursor)], cursor
     end,
 
---[[[nilbyte] = function(buff: buffer, byte: number, cursor: number): (any, number)
-        return nil, cursor
-    end;
-
-    [emptytablebyte] = function(buff: buffer, byte: number, cursor: number): (any, number)
-        return {}, cursor
-    end;]]
 } :: datatypedecodinginfo
 
 -- doing those here so theres no cost for indexing ByteToValue

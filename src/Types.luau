@@ -1,6 +1,8 @@
 type table = { [any]: any }
 export type encodeinfo = {
-	scanned: { [table]: number },
+	valuepositionlookup: {[any]: any};
+
+	scanlist: { {[any]: any} },
 	scancount: number,
 
 	deduplicatedcount: number,
@@ -8,16 +10,19 @@ export type encodeinfo = {
 	deduplicatedarray: { any },
 
 	referencecount: number?,
-	referenceadded: { [any]: number }, 
 	referencelist: { any },
 	
 	allocatedsize: number;
+	currentsize: number;
 }
 
 export type decodeinfo = {
     bufferstring: string?;
 	deduplicationtable: { any };
-	tables:  { table }
+	references: { any }?;
+	tables:  { table };
+
+	didrefwarn: boolean?;
 }
 
 export type datatypedecodinginfo = {

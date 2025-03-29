@@ -54,13 +54,6 @@ v---v---v---v---v---v---v---v settings v---v---v---v---v---v---v---v
 > rbxenum_behavior: string ( 'full' | 'compact' ) >> default 'compact'
 	details on what this does are present in 'RbxEnumEncoder' script
 
-> stringsalwayslengthbound: boolean >> default true
-	if enabled, strings never save as zero-terminated (ends with `\0` byte) strings
-	
-> referencebitsize: number (8, 16, or 32) >> default 8
-	how many bits to save per reference to a value that cannot be encoded, when allowreferences is enabled
-	this is mainly for instances, but it also includes any other datatype like region3 which are not saved
-
 > serverclientsyncing: boolean
 	determines whether to sync enumitems and custom values between client and server
 ]]
