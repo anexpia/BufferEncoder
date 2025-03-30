@@ -14,7 +14,7 @@ Unlike other buffer serializers, BufferEncoder doesn't require you to define the
 * Has simple encryption that relies on psuedo-random number generation
 * Fully typed
 
-List of all datatypes that can be encoded are in [this module](https://github.com/anexpia/BufferEncoder/blob/main/src/init.luau)
+List of all datatypes that can be encoded are in [this module](src/init.luau)
 
 # API
 ### Encoder.write(table, writestart, allowreferences, shiftseed) -> ( buffer, {any}? )
@@ -54,10 +54,10 @@ Removes the name value pair from the custom value registry
 Settings can be changed by either changing them directly in the 'Settings' module or by adding the setting as an attribute in the module with the value you want
 
 * rbxenum_behavior ("compact" or "full") - Changes how enumitems are encoded, defaults to 'false'.\
-Exact details of what each type does are inside [this module](https://github.com/anexpia/BufferEncoder/blob/main/src/init.luau)
+Exact details of what each type does are inside [this module](src/RbxEnumEncoder.luau)
 * color3always6bytes (boolean) - Sets whether Color3s are always encoded as float16 values, defaults to **false**.
 * serverclientsyncing (boolean) - Determines whether to sync EnumItems and custom values from server to client, defaults to **false**
 
 # License
-BufferEncoder is licensed under the [GPL-3.0 License](https://github.com/anexpia/BufferEncoder/blob/main/LICENSE).
+BufferEncoder is licensed under the [GPL-3.0 License](LICENSE).
 
