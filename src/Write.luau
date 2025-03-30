@@ -103,58 +103,63 @@ local function allocate(buff: buffer, amount: number, info: encodeinfo): buffer
 	return buff
 end
 
---[[find tables to be encoded and deduplicate values]]
-local function scan(tbl: {[any]: any}, info: encodeinfo)
-	local arraywritelength = rawlen(tbl)
-	local isdoingdict = arraywritelength == 0
+--[[find values to deduplicate]]
+local function finddeduplicate(info: encodeinfo)
+	for _, tbl in info.scanlist do 
+		local arraywritelength = rawlen(tbl)
+		local isdoingdict = arraywritelength == 0
 
-	local iternum = if isdoingdict then 2 else 1
+		local iternum = if isdoingdict then 2 else 1
 
-	for k, v in next, tbl do 
+		for k, v in next, tbl do 
 
-		for i = 1, iternum do 
-			local isdict = isdoingdict and i == 1
-			local value = if isdict then k else v
+			for i = 1, iternum do 
+				local isdict = isdoingdict and i == 1
+				local value = if isdict then k else v
 
-			local t: string = typeof(value)
-	
-			if t == 'string' or t == 'Vector3' or t == 'number' or (fullrbxenum and (t == 'EnumItem' or t == 'Enum')) then
+				local t: string = typeof(value)
 
-				if t == 'number' then
-					-- check for 0, 1, -1, math.huge, -math.huge, and nan, since they have their own special bytes so they shouldnt be deduplicated
-					-- numbers below 256 that arent float values shouldnt be deduplicated
-					
-					local abs = math.abs(value)
-					if (abs == math.huge) or (abs ~= abs) or (not (abs > 0xFF or abs % 1 ~= 0)) then continue end
-				elseif value == "" then continue end
-				
-				local added = info.deduplicatedlookup[value]
+				if t == 'string' or t == 'Vector3' or t == 'number' or (fullrbxenum and (t == 'EnumItem' or t == 'Enum')) then
 
-				if added == true then
-					local position = info.deduplicatedcount + 1
+					if t == 'number' then
+						-- check for 0, 1, -1, math.huge, -math.huge, and nan, since they have their own special bytes so they shouldnt be deduplicated
+						-- numbers below 256 that arent float values shouldnt be deduplicated
 
-					info.deduplicatedcount = position
-					info.deduplicatedlookup[value] = position
-					info.deduplicatedarray[position] = value
-				elseif not added then info.deduplicatedlookup[value] = true end
-				
-			elseif t == "table" then
-				local scanpos = info.valuepositionlookup[value]
+						local abs = math.abs(value)
+						if (abs == math.huge) or (abs ~= abs) or (not (abs > 0xFF or abs % 1 ~= 0)) then continue end
+					elseif value == "" then continue end
 
-				if scanpos then
-					continue
-				elseif next(value) ~= nil then
-					scanpos = info.scancount + 1
-					info.scancount = scanpos
-					info.valuepositionlookup[value] = scanpos
-					info.scanlist[scanpos] = value
-					
-					scan(value, info)
+					local added = info.deduplicatedlookup[value]
+
+					if added == true then
+						local position = info.deduplicatedcount + 1
+
+						info.deduplicatedcount = position
+						info.deduplicatedlookup[value] = position
+						info.deduplicatedarray[position] = value
+					elseif not added then info.deduplicatedlookup[value] = true end
+
+				elseif t == "table" then
+					local scanpos = info.valuepositionlookup[value]
+
+					if scanpos ~= nil then continue
+					elseif next(value) ~= nil then
+						scanpos = info.scancount + 1
+						info.scancount = scanpos
+						info.valuepositionlookup[value] = scanpos
+						info.scanlist[scanpos] = value
+					else 
+						info.valuepositionlookup[value] = false
+					end
 				end
 			end
-		end
 
-		if k == arraywritelength then iternum = 2; isdoingdict = true end
+			if k == arraywritelength then iternum = 2; isdoingdict = true end
+		end
+	end
+	
+	for k, v in info.deduplicatedlookup do 
+		if v == true then info.deduplicatedlookup[k] = nil end
 	end
 end
 
@@ -326,6 +331,13 @@ local function write(
 				buffer.writestring(buff, cursor, value); cursor += len
 			elseif t == "table" then
 				local scanpos = info.valuepositionlookup[value]
+				if not (scanpos or dedupallowed) and (next(value) ~= nil) then
+					scanpos = info.scancount + 1
+					info.scancount = scanpos
+					info.valuepositionlookup[value] = scanpos
+					info.scanlist[scanpos] = value
+				end
+				
 				if scanpos then
 					if scanpos <= 0xFF then
 						buff = allocate(buff, 2, info)
@@ -643,7 +655,6 @@ end
 
 local writingbuffer = buffer.create(256)
 local writingbuffersize = 256
-local emptytable = {}
 
 type BenchmarkerProfiler = {
 	Begin: (name: string) -> nil;
@@ -653,21 +664,24 @@ type BenchmarkerProfiler = {
 --[[
 returns the table given encoded as a buffer, and the size of buffer
 
-if writeoffset is given, writing starts from the offset given.
-if allowreferences is enabled, it returns a table containing the values it couldn't encode alongside the first 2 values.
-if shiftseed is given, the bytesigns of values are shifted by the number given.
+param - value : the table to encode
+param - writeoffset : writing starts from the offset given.
+param - allowreferences : if enabled, it returns a table containing the values it couldn't encode alongside the first 2 values.
+param - allowdeduplication : attempt to deduplicate repeated values if enabled to reduce buffer size
+param - shiftseed : the type bytes of values are shuffled using the seed.
 ]]
 return function(
 	value: { [any]: any },
 	writeoffset: number?,
 	allowreferences: boolean?,
+	allowdeduplication: boolean?,
 	shiftseed: number?,
 	Profiler: BenchmarkerProfiler?
 ): (buffer, { any }?)
 	if type(value) == "table" then
 		if shiftseed then math.randomseed(shiftseed) end
 		
-		if not next(value) then
+		if next(value) == nil then
 			local b = buffer.create(1)
 			buffer.writeu8(b, 0, tryshift(101, shiftseed))
 
@@ -684,8 +698,8 @@ return function(
 			scanlist = {value},
 
 			deduplicatedcount = 0,
-			deduplicatedlookup = {},
-			deduplicatedarray = {},
+			deduplicatedlookup = nil :: any,
+			deduplicatedarray = nil :: any,
 
 			referencelist = nil :: any,
 
@@ -696,10 +710,15 @@ return function(
 		if allowreferences then
 			info.referencecount, info.referencelist = 0, {}
 		end
-
-		if Profiler then Profiler.Begin("Scan") end
-		scan(value, info)
-		if Profiler then Profiler.End() end
+		
+		if allowdeduplication then
+			if Profiler then Profiler.Begin("Deduplicate") end
+			
+			info.deduplicatedlookup, info.deduplicatedarray = {}, {}
+			finddeduplicate(info)
+			
+			if Profiler then Profiler.End() end
+		end
 
 		local dedupcount = info.deduplicatedcount
 
@@ -710,22 +729,22 @@ return function(
 		end
 		
 		-- 2 bytes extra, 1 for deduplication table (if it exists), and 1 for end of table byte (0)
-		buff = allocate(buff, info.scancount + 2, info)
-
-		if dedupcount > 0 then			
-			for k, v in info.deduplicatedlookup do 
-				if v == true then info.deduplicatedlookup[k] = nil end
-			end
-			
+		
+		allowdeduplication = dedupcount > 0
+		
+		if allowdeduplication then			
+			buff = allocate(buff, 1, info)
 			writebytesign(buff, cursor, 0, nil, shiftseed)
 			buff, cursor = write(buff, cursor + 1, info.deduplicatedarray, info, false, shiftseed)
-		else info.deduplicatedlookup = emptytable end
-
-		for i, tbl in info.scanlist do
-			writebytesign(buff, cursor, 1, nil, shiftseed)
-			buff, cursor = write(buff, cursor + 1, tbl, info, true, shiftseed)
 		end
 
+		for i, tbl in info.scanlist do
+			buff = allocate(buff, 1, info)
+			writebytesign(buff, cursor, 1, nil, shiftseed)
+			buff, cursor = write(buff, cursor + 1, tbl, info, allowdeduplication, shiftseed)
+		end
+		
+		buff = allocate(buff, 1, info)
 		writebytesign(buff, cursor, 0, nil, shiftseed)
 
 		if Profiler then

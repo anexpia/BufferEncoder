@@ -23,6 +23,9 @@ Converts the given `table` into a buffer
 If `writestart` is provided, table content writing will begin from `writestart`\
 If `allowreferences` is enabled, It will return a table containing all the datatypes it was unable to encode\
 The returned table can be used in **Encoder.read()** for the values to be found when decoding the buffer.\
+if `allowdeduplication` is enabled, It will deduplicate any repeated string, number, or vector3 to reduce buffer size
+This reduces performance, so only use it when your data contains values that are repeated and you want to reduce data size
+
 If `shiftseed` is provided, It will shift the byte used for the type of the value by a random value acquired using the seed
 
 > [!WARNING]
