@@ -678,10 +678,9 @@ return function(
 		
 		local cursor: number = writeoffset or 0
 		local info: encodeinfo = {
-			valuepositionlookup = {},
+			valuepositionlookup = {[value] = 1},
 
 			scancount = 1,
-			scanned = {[value] = 1},
 			scanlist = {value},
 
 			deduplicatedcount = 0,
