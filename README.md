@@ -17,14 +17,13 @@ Unlike other buffer serializers, BufferEncoder doesn't require you to define the
 List of all datatypes that can be encoded are in [this module](src/init.luau)
 
 # API
-### Encoder.write(table, writestart, allowreferences, shiftseed) -> ( buffer, {any}? )
+### Encoder.write(table, writestart, allowreferences, allowdeduplication, shiftseed) -> ( buffer, {any}? )
 Converts the given `table` into a buffer
 
 If `writestart` is provided, table content writing will begin from `writestart`\
 If `allowreferences` is enabled, It will return a table containing all the datatypes it was unable to encode\
 The returned table can be used in **Encoder.read()** for the values to be found when decoding the buffer.\
 if `allowdeduplication` is enabled, It will deduplicate any repeated string, number, or vector3 to reduce buffer size
-This reduces performance, so only use it when your data contains values that are repeated and you want to reduce data size
 
 If `shiftseed` is provided, It will shift the byte used for the type of the value by a random value acquired using the seed
 
@@ -32,7 +31,7 @@ If `shiftseed` is provided, It will shift the byte used for the type of the valu
 > If you really need to securely encrypt your buffer, do not rely on the shiftseed parameter.
 
 ---
-### Encoder.read(buffer, readstart, references, shiftseed) -> { [any]: any }
+### Encoder.read(buffer, readstart, references, allowdeduplication, shiftseed) -> { [any]: any }
 Converts the given `buffer` back into a table\
 Parameters should be consistent with **Encoder.write()** so that you don't encounter bugs
 

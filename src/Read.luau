@@ -10,9 +10,9 @@ local Types = require(script.Parent.Types)
 Decodes the buffer created by encoder.write()
 parameters should be consistent with encoder.write().
 ]]
-return function(buff: buffer, readstart: number?, references: { any }?, shiftseed: number?): { [any]: any }
+return function(buff: buffer, readstart: number?, references: { any }?, dedupenabled: boolean?, shiftseed: number?): { [any]: any }
 	local cursor = readstart or 0
-	local isdoingdeduplication = false
+	local isdoingdeduplication_old = false
 
 	do
 		local firstbyte = buffer.readu8(buff, cursor)
@@ -28,10 +28,12 @@ return function(buff: buffer, readstart: number?, references: { any }?, shiftsee
 			error(`expected '0', '1', or '101' for first byte, got {firstbyte}`)
 		end
 
-		isdoingdeduplication = firstbyte == 0
+		isdoingdeduplication_old = firstbyte == 0
+		if isdoingdeduplication_old then dedupenabled = false end
 	end
 
-	local deduplicationtable
+	local deduplicationindex = 0
+	local deduplicationtable = if dedupenabled then {} else nil
 	local currenttable = {}
 	local maintable = currenttable
 
@@ -44,7 +46,7 @@ return function(buff: buffer, readstart: number?, references: { any }?, shiftsee
 
 	local info: Types.decodeinfo = {
 		stringform = nil,
-		deduplicationtable = nil :: any,
+		deduplicationtable = deduplicationtable,
 		references = references,
 		tables = formedtables,
 	}
@@ -62,11 +64,11 @@ return function(buff: buffer, readstart: number?, references: { any }?, shiftsee
 			byte = (byte - math.random(1, 127)) % 128
 		end
 
-		local value: any
+		local value: any, canbededuplicated: boolean?
 
 		local func = Datatypes[byte]
 		if func then
-			value, cursor = func(buff, byte, cursor, info)
+			value, cursor, canbededuplicated = func(buff, byte, cursor, info)
 		elseif byte == 1 then 
 			formedcount += 1
 
@@ -82,8 +84,8 @@ return function(buff: buffer, readstart: number?, references: { any }?, shiftsee
 
 			continue
 		elseif byte == 0 then
-			if isdoingdeduplication then
-				isdoingdeduplication = false
+			if isdoingdeduplication_old then
+				isdoingdeduplication_old = false
 
 				currenttable = {}
 				deduplicationtable = currenttable
@@ -104,6 +106,11 @@ return function(buff: buffer, readstart: number?, references: { any }?, shiftsee
 			continue
 		else
 			error(`{byte} is not a type byte`)
+		end
+
+		if dedupenabled and canbededuplicated then
+			deduplicationindex += 1
+			deduplicationtable[deduplicationindex] = value
 		end
 
 		if lastwasdictkey then

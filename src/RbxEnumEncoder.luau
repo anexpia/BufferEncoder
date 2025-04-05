@@ -71,19 +71,19 @@ if Settings.rbxenum_behavior == "full" then
 	end
 
 	@native
-	function exposed.decodeEnum(buf: buffer, byte: number, cursor: number): (Enum, number)
+	function exposed.decodeEnum(buf: buffer, byte: number, cursor: number): (Enum, number, boolean?)
 		local length = buffer.readu8(buf, cursor); cursor += 1
 		local name = buffer.readstring(buf, cursor, length)
 
-		return nametoenum[name], cursor + length
+		return nametoenum[name], cursor + length, true
 	end
 
 	@native
-	function exposed.decodeEnumItem(buf: buffer, byte: number, cursor: number): (EnumItem, number)
+	function exposed.decodeEnumItem(buf: buffer, byte: number, cursor: number): (EnumItem, number, boolean?)
 		local enum, newcursor = exposed.decodeEnum(buf, byte, cursor)
 		local value = buffer.readu16(buf, newcursor)
 
-		return enum and enum:FromValue(value), newcursor + 2
+		return enum and enum:FromValue(value), newcursor + 2, true
 	end
 
 	-- encode enums as <19> <u16 index>

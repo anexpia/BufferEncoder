@@ -3,13 +3,6 @@ export type encodeinfo = {
 	valuepositionlookup: {[any]: any};
 
 	scanlist: { {[any]: any} },
-	scancount: number,
-
-	deduplicatedcount: number,
-	deduplicatedlookup: { [any]: number | boolean }, 
-	deduplicatedarray: { any },
-
-	referencecount: number?,
 	referencelist: { any },
 	
 	allocatedsize: number;
@@ -26,7 +19,7 @@ export type decodeinfo = {
 }
 
 export type datatypedecodinginfo = {
-	[number]: (buff: buffer, byte: number, cursor: number, info: decodeinfo) -> any,
+	[number]: (buff: buffer, byte: number, cursor: number, info: decodeinfo) -> (any, number, boolean?),
 
 }
 

@@ -28,29 +28,29 @@ local floatnumbyte = 11
 local writebytesign
 
 local t = {
-	[u8numbyte] = @native function(buff: buffer, byte: number, cursor: number): (any, number)
-		return buffer.readu8(buff, cursor), cursor + 1
+	[u8numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
+		return buffer.readu8(buff, cursor), cursor + 1, true
 	end;
-	[n_u8numbyte] = @native function(buff: buffer, byte: number, cursor: number): (any, number)
-		return -buffer.readu8(buff, cursor), cursor + 1
-	end;
-
-	[u16numbyte] = @native function(buff: buffer, byte: number, cursor: number): (any, number)
-		return buffer.readu16(buff, cursor), cursor + 2
-	end;
-	[n_u16numbyte] = @native function(buff: buffer, byte: number, cursor: number): (any, number)
-		return -buffer.readu16(buff, cursor), cursor + 2
+	[n_u8numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
+		return -buffer.readu8(buff, cursor), cursor + 1, true
 	end;
 
-	[u32numbyte] = @native function(buff: buffer, byte: number, cursor: number): (any, number)
-		return buffer.readu32(buff, cursor), cursor + 4
+	[u16numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
+		return buffer.readu16(buff, cursor), cursor + 2, true
 	end;
-	[n_u32numbyte] = @native function(buff: buffer, byte: number, cursor: number): (any, number)
-		return -buffer.readu32(buff, cursor), cursor + 4
+	[n_u16numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
+		return -buffer.readu16(buff, cursor), cursor + 2, true
 	end;
 
-	[floatnumbyte] = @native function(buff: buffer, byte: number, cursor: number): (any, number)
-		return buffer.readf64(buff, cursor), cursor + 8
+	[u32numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
+		return buffer.readu32(buff, cursor), cursor + 4, true
+	end;
+	[n_u32numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
+		return -buffer.readu32(buff, cursor), cursor + 4, true
+	end;
+
+	[floatnumbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
+		return buffer.readf64(buff, cursor), cursor + 8, true
 	end;
 }
 
