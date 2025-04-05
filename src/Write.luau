@@ -161,7 +161,7 @@ local function write(
 	
 	for _, tbl in scanlist do 
 		buff = allocate(buff, 1, info)
-		writebytesign(buff, cursor, 1, nil, shiftseed)
+		writebytesign(buff, cursor, 1, nil, shiftseed); cursor += 1
 		
 		local arraywritelength = rawlen(tbl)
 		local isdoingdict = arraywritelength == 0
@@ -693,7 +693,7 @@ return function(
 			Profiler.Begin("Write")
 		end
 		
-		buff, cursor = write(buff, cursor + 1, info, allowdeduplication, shiftseed)
+		buff, cursor = write(buff, cursor, info, allowdeduplication, shiftseed)
 
 		buff = allocate(buff, 1, info)
 		writebytesign(buff, cursor, 0, nil, shiftseed)
