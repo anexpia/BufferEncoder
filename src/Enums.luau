@@ -152,7 +152,7 @@ return {
 		if IsSyncOrigin then
 			local byte = table.remove(freebytes)
 
-			if byte then
+			if not byte then
 				byte = currentposition - 1
 				currentposition = byte
 			end
