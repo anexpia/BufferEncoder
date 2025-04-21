@@ -10,8 +10,10 @@ local FP_EPSILON = 1e-6
 local I16_PRECISION = 32767                 -- int16 range { -32,786, 32,767 }
 local BUFF_CFRAME_SIZE = (3*4) + (1 + 3*2)  -- i.e. 3x f32, 1x u8 and 3x i16
 
+local cframe_ToAxisAngle = CFrame.identity.ToAxisAngle
+
 local function getNormalisedQuaternion(cframe: CFrame)
-	local axis_shadowed, angle = cframe:ToAxisAngle()
+	local axis_shadowed, angle = cframe_ToAxisAngle(cframe)
 	local ha = angle / 2
 
 	local axis: vector = if vector.magnitude(axis_shadowed) > FP_EPSILON then vector.normalize(axis_shadowed) else (Vector3.xAxis :: any)

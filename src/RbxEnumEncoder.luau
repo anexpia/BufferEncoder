@@ -51,6 +51,8 @@ if Settings.rbxenum_behavior == "full" then
 	end
 	-- this is to avoid erroring due to version mismatch when decoding
 
+	local enum_FromValue = (Enum.Material :: any).FromValue
+
 	@native
 	function exposed.encodeEnum(buf: buffer, offset: number, enum: Enum): number
 		local name = enumitem_to_type[enum]
@@ -83,7 +85,7 @@ if Settings.rbxenum_behavior == "full" then
 		local enum, newcursor = exposed.decodeEnum(buf, byte, cursor)
 		local value = buffer.readu16(buf, newcursor)
 
-		return enum and enum:FromValue(value), newcursor + 2, true
+		return enum and enum_FromValue(enum, value), newcursor + 2, true
 	end
 
 	-- encode enums as <19> <u16 index>
