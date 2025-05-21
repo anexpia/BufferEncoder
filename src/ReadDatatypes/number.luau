@@ -29,10 +29,10 @@ local writebytesign
 
 local t = {
 	[u8numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
-		return buffer.readu8(buff, cursor), cursor + 1, true
+		return buffer.readu8(buff, cursor), cursor + 1
 	end;
 	[n_u8numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
-		return -buffer.readu8(buff, cursor), cursor + 1, true
+		return -buffer.readu8(buff, cursor), cursor + 1
 	end;
 
 	[u16numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
@@ -48,11 +48,18 @@ local t = {
 	[n_u32numbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
 		return -buffer.readu32(buff, cursor), cursor + 4, true
 	end;
-
-	[floatnumbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
-		return buffer.readf64(buff, cursor), cursor + 8, true
-	end;
 }
+
+if Settings.sanitize_nanandinf then
+	t[floatnumbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
+		local n = buffer.readf64(buff, cursor)
+		return if (n / n) ~= 1 then 0 else n, cursor + 8, true
+	end
+else 
+	t[floatnumbyte] = @native function(buff: buffer, byte: number, cursor: number): (number, number, boolean?)
+		return buffer.readf64(buff, cursor), cursor + 8, true
+	end
+end
 
 t.readnumber_compact = @native function(buff: buffer, byte: number, cursor: number): (number, number)
 	if byte == 11 then
@@ -68,4 +75,4 @@ t.readnumber_compact = @native function(buff: buffer, byte: number, cursor: numb
 	end
 end
 
-return t 
+return t  

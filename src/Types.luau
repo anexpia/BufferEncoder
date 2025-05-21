@@ -14,8 +14,6 @@ export type decodeinfo = {
 	deduplicationtable: { any };
 	references: { any }?;
 	tables:  { table };
-
-	didrefwarn: boolean?;
 }
 
 export type datatypedecodinginfo = {

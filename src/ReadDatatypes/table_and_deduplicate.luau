@@ -63,12 +63,9 @@ local function readreference(buff: buffer, byte: number, cursor: number, info: T
 
     if references then
         return references[index], cursor
-    elseif not info.didrefwarn then 
-        warn('Missing references table when decoding buffer that contains value references.') 
-        info.didrefwarn = true
+    else
+        error('Missing references table when decoding buffer that contains value references.') 
     end
-
-    return nil, cursor
 end
 
 local t = {

@@ -10,6 +10,8 @@ local Types = require(script.Parent.Types)
 Decodes the buffer created by encoder.write()
 parameters should be consistent with encoder.write().
 ]]
+
+local defaultwritingtable = {}
 return function(buff: buffer, readstart: number?, references: { any }?, dedupenabled: boolean?, shiftseed: number?): { [any]: any }
 	local cursor = readstart or 0
 	local isdoingdeduplication_old = false
@@ -36,6 +38,8 @@ return function(buff: buffer, readstart: number?, references: { any }?, dedupena
 	local deduplicationtable = if dedupenabled then {} else nil
 	local currenttable = {}
 	local maintable = currenttable
+	
+	local writingtable = defaultwritingtable
 
 	local formedtables = {currenttable}
 	local formedcount = 0
@@ -71,15 +75,19 @@ return function(buff: buffer, readstart: number?, references: { any }?, dedupena
 			value, cursor, canbededuplicated = func(buff, byte, cursor, info)
 		elseif byte == 1 then 
 			formedcount += 1
-
+			
+			if currentindex > 0 then
+				table.move(writingtable, 1, currentindex, 1, currenttable)
+				currentindex = 0
+			end
+			
 			currenttable = formedtables[formedcount]
 			if currenttable == nil then
 				currenttable = {}
 				formedtables[formedcount] = currenttable
 			end
 
-			currentindex = 0
-			isdictkey = false
+			lastwasdictkey = false
 			dictkey = nil
 
 			continue
@@ -95,16 +103,15 @@ return function(buff: buffer, readstart: number?, references: { any }?, dedupena
 			else
 				if shiftseed then math.randomseed(os.time()) end
 				
+				if currentindex > 0 then
+					table.move(writingtable, 1, currentindex, 1, currenttable)
+				end
+				
+				table.clear(writingtable)
 				return maintable
 			end
 		elseif byte == 101 then value = {}
-		elseif byte == 4 then -- nil
-			-- can never be dict key
-			if lastwasdictkey then lastwasdictkey = false 
-			else currentindex += 1 end 
-
-			continue
-		else
+		elseif byte ~= 4 then -- not nil
 			error(`{byte} is not a type byte`)
 		end
 
@@ -125,7 +132,7 @@ return function(buff: buffer, readstart: number?, references: { any }?, dedupena
 			lastwasdictkey = true
 		else
 			currentindex += 1
-			currenttable[currentindex] = value
+			writingtable[currentindex] = value
 		end
 	end
 

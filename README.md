@@ -52,10 +52,11 @@ Removes the name value pair from the custom value registry
 # Settings
 Settings can be changed by either changing them directly in the 'Settings' module or by adding the setting as an attribute in the module with the value you want
 
-* rbxenum_behavior ("compact" or "full") - Changes how enumitems are encoded, defaults to 'compact'.\
+* rbxenum_behavior ("compact" or "full") - Changes how enumitems are encoded, defaults to 'full'.\
 Exact details of what each type does are inside [this module](src/RbxEnumEncoder.luau)
 * color3always6bytes (boolean) - Sets whether Color3s are always encoded as float16 values, defaults to **false**.
 * serverclientsyncing (boolean) - Determines whether to sync EnumItems and custom values from server to client, defaults to **false**
+* sanitize_nanandinf (boolean) - Determiens whether to turn NaN and math.huge into 0 when reading buffer content, defaults to **false**, *This only sanitizes them for Numbers, Vectors, Rays, and CFrames.*
 
 # License
 BufferEncoder is licensed under the [GPL-3.0 License](LICENSE).

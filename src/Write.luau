@@ -189,15 +189,15 @@ local function write(
 				local isdict = isdoingdict and i == 1
 				local value = if isdict then k else v
 
-				local enumbyte = valuetobyte[value]
-				if enumbyte then
-					if enumbyte <= 0 then
+				local valuebyte = valuetobyte[value]
+				if valuebyte then
+					if valuebyte <= 0 then
 						buff = allocate(buff, 2, info)
 						writebytesign(buff, cursor, 99, isdict, shiftseed)
-						buffer.writeu8(buff, cursor + 1, -enumbyte); cursor += 2
+						buffer.writeu8(buff, cursor + 1, -valuebyte); cursor += 2
 					else
 						buff = allocate(buff, 1, info)
-						writebytesign(buff, cursor, enumbyte, isdict, shiftseed); cursor += 1
+						writebytesign(buff, cursor, valuebyte, isdict, shiftseed); cursor += 1
 					end
 
 					continue
@@ -207,28 +207,38 @@ local function write(
 				local candeduplicate = dedupallowed and (t == 'string' or t == 'Vector3' or t == 'number' or (fullrbxenum and (t == 'EnumItem' or t == 'Enum')))
 
 				if candeduplicate then
-					if t == 'number' then
-						-- nan shouldnt be deduplicated
-						-- numbers below 256 that arent float values shouldnt be deduplicated
+					if value ~= value then
+						-- nan shouldnt be deduplicated, whether in a vector or as a number
 						
-
-						if value ~= value then 
-							-- encoding here to avoid rechecking later
+						if t == 'number' then
 							buff = allocate(buff, 1, info)
 							writebytesign(buff, cursor, 108, isdict, shiftseed); cursor += 1
+						else 
+							-- vector in this case
+							
+							buff = allocate(buff, 13, info)
+
+							writebytesign(buff, cursor, 15, isdict, shiftseed); cursor += 1
+							buffer.writef32(buff, cursor, value.X); cursor += 4
+							buffer.writef32(buff, cursor, value.Y); cursor += 4
+							buffer.writef32(buff, cursor, value.Z); cursor += 4
+						end
+						
+						continue
+					end
+					
+					if t == 'number' then
+						-- numbers below 256 that arent float values shouldnt be deduplicated
+
+						local abs = math.abs(value)
+						if not (abs > 0xFF or abs % 1 ~= 0) then
+							-- encoding here to avoid rechecking later
+							buff = allocate(buff, 5, info)
+
+							writebytesign(buff, cursor, if value < 0 then 8 else 5, isdict, shiftseed)
+							buffer.writeu8(buff, cursor + 1, abs); cursor += 2
 
 							continue
-						else
-							local abs = math.abs(value)
-							if not (abs > 0xFF or abs % 1 ~= 0) then
-								-- encoding here to avoid rechecking later
-								buff = allocate(buff, 5, info)
-
-								writebytesign(buff, cursor, if value < 0 then 8 else 5, isdict, shiftseed)
-								buffer.writeu8(buff, cursor + 1, abs); cursor += 2
-
-								continue
-							end
 						end
 					end
 
