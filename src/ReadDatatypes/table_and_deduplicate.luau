@@ -82,7 +82,7 @@ local t = {
     [referenceu32byte] = readreference;
 
     [customvaluebyte] = @native function(buff: buffer, byte: number, cursor: number)
-		return ByteToValue[-buffer.readu8(buff, cursor)], cursor
+		return ByteToValue[-buffer.readu8(buff, cursor)], cursor + 1
     end,
 
 } :: datatypedecodinginfo
