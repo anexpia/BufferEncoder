@@ -1,5 +1,6 @@
 --!native
 --!optimize 2
+--!nolint LocalShadow 
 
 --[[ ## made by anexpia •…• ## ]]
 
@@ -90,13 +91,13 @@ local function expandbuffertosize(buff: buffer, newsize: number, info: encodeinf
 	if newsize > info.allocatedsize then
 		newsize //= 1/1.375
 		info.allocatedsize = newsize 
-		
+
 		local newbuff = buffer.create(newsize)
 		buffer.copy(newbuff, 0, buff)
-		
+
 		return newbuff
 	end
-	
+
 	return buff
 end
 
@@ -146,28 +147,28 @@ local function write(
 	dedupallowed: boolean?,
 	shiftseed: number?
 ): (buffer, number)
-	
-	local scancount = 1
-	local deduplicatedcount = 0
-	local referencecount = 0
-	
+
+	local scancount: number = 1
+	local deduplicatedcount: number = 0
+	local referencecount: number = 0
+
 	local valuepositionlookup = info.valuepositionlookup
-	
+
 	local scanlist = info.scanlist
 	local referencelist = info.referencelist
-	
+
 	for _, tbl in scanlist do 
 		buff = expandbuffertosize(buff, cursor + 1, info)
 		writebytesign(buff, cursor, 1, nil, shiftseed); cursor += 1
-		
-		local arraywritelength = rawlen(tbl)
-		local isdoingdict = arraywritelength == 0
 
-		local iternum = if isdoingdict then 2 else 1	
-		local lastkey = 0
+		local arraywritelength: number = rawlen(tbl)
+		local isdoingdict: boolean = arraywritelength == 0
+
+		local iternum: number = if isdoingdict then 2 else 1	
+		local lastkey: number = 0
 		for k, v in next, tbl do 
 			if (not isdoingdict) then
-				local diff = (k - lastkey) - 1
+				local diff: number = (k - lastkey) - 1
 
 				if diff > 0 then
 					buff = expandbuffertosize(buff, cursor + diff, info)
@@ -183,10 +184,10 @@ local function write(
 			end
 
 			for i = 1, iternum do 
-				local isdict = isdoingdict and i == 1
-				local value = if isdict then k else v
+				local isdict: boolean = isdoingdict and i == 1
+				local value: any = if isdict then k else v
 
-				local valuebyte = valuetobyte[value]
+				local valuebyte: number? = valuetobyte[value]
 				if valuebyte then
 					if valuebyte <= 0 then
 						buff = expandbuffertosize(buff, cursor + 2, info)
@@ -200,19 +201,20 @@ local function write(
 					continue
 				end
 
-				local t = typeof(value)
-				local candeduplicate = dedupallowed and (t == 'string' or t == 'Vector3' or t == 'number' or (fullrbxenum and (t == 'EnumItem' or t == 'Enum')))
+				local t: string = typeof(value)
+				local candeduplicate: boolean = dedupallowed and (t == 'string' or t == 'Vector3' or t == 'number' or (fullrbxenum and (t == 'EnumItem' or t == 'Enum')))
 
 				if candeduplicate then
 					if value ~= value then
 						-- nan shouldnt be deduplicated, whether in a vector or as a number
-						
+
 						if t == 'number' then
 							buff = expandbuffertosize(buff, cursor + 1, info)
 							writebytesign(buff, cursor, 108, isdict, shiftseed); cursor += 1
 						else 
+							local value: Vector3 = value
 							-- vector in this case
-							
+
 							buff = expandbuffertosize(buff, cursor + 13, info)
 
 							writebytesign(buff, cursor, 15, isdict, shiftseed); cursor += 1
@@ -220,11 +222,12 @@ local function write(
 							buffer.writef32(buff, cursor, value.Y); cursor += 4
 							buffer.writef32(buff, cursor, value.Z); cursor += 4
 						end
-						
+
 						continue
 					end
-					
+
 					if t == 'number' then
+						local value: number = value
 						-- numbers below 256 that arent float values shouldnt be deduplicated
 
 						local abs = math.abs(value)
@@ -239,7 +242,7 @@ local function write(
 						end
 					end
 
-					local added = valuepositionlookup[value]
+					local added: number? = valuepositionlookup[value]
 
 					if added then
 						if added <= 0xFF then -- u8
@@ -267,6 +270,8 @@ local function write(
 					buff = expandbuffertosize(buff, cursor + 1, info)
 					writebytesign(buff, cursor, 4, isdict, shiftseed); cursor += 1
 				elseif t == "number" then
+					local value: number = value
+
 					if value ~= value then
 						buff = expandbuffertosize(buff, cursor + 1, info)
 						writebytesign(buff, cursor, 108, isdict, shiftseed); cursor += 1
@@ -274,7 +279,7 @@ local function write(
 						local abs = math.abs(value)
 						if (value % 1) ~= 0 or abs > 0xFFFFFFFF then -- float64
 							buff = expandbuffertosize(buff, cursor + 9, info)
-							
+
 
 							writebytesign(buff, cursor, 11, isdict, shiftseed)
 							buffer.writef64(buff, cursor + 1, value); cursor += 9
@@ -300,9 +305,8 @@ local function write(
 						end
 					end
 				elseif t == "string" then
-					local len: number = #value -- did you know that removing the type annotation for this
-					-- will result in a performance decrease when in native 💀
-					-- i lost my mind figuring this out
+					local value: string = value
+					local len: number = #value 
 
 					if len <= 0xFF then -- not zero-terminated since no benefit in making it zero-terminated
 						buff = expandbuffertosize(buff, cursor + len + 2, info)
@@ -323,10 +327,11 @@ local function write(
 
 					buffer.writestring(buff, cursor, value); cursor += len
 				elseif t == "table" then
-					local scanpos = valuepositionlookup[value]
+					local value: {[any]: any} = value
+					local scanpos: number? = valuepositionlookup[value]
 					if (not scanpos) and (next(value) ~= nil) then
 						scanpos = scancount + 1
-						scancount = scanpos
+						scancount = scanpos :: any
 						valuepositionlookup[value] = scanpos
 						scanlist[scanpos] = value
 					end
@@ -354,7 +359,8 @@ local function write(
 						writebytesign(buff, cursor, 101, isdict, shiftseed); cursor += 1
 					end
 				elseif t == "buffer" then
-					local length = buffer.len(value)
+					local value: buffer = value
+					local length: number = buffer.len(value)
 
 					if length <= 0xFF then
 						buff = expandbuffertosize(buff, cursor + 2, info)
@@ -376,6 +382,7 @@ local function write(
 					buffer.copy(buff, cursor, value)
 					cursor += length
 				elseif t == "Vector3" then
+					local value: Vector3 = value
 					buff = expandbuffertosize(buff, cursor + 13, info)
 
 					writebytesign(buff, cursor, 15, isdict, shiftseed); cursor += 1
@@ -383,23 +390,26 @@ local function write(
 					buffer.writef32(buff, cursor, value.Y); cursor += 4
 					buffer.writef32(buff, cursor, value.Z); cursor += 4
 				elseif t == "Vector2" then
+					local value: Vector2 = value
 					buff = expandbuffertosize(buff, cursor + 9, info)
 
 					writebytesign(buff, cursor, 16, isdict, shiftseed); cursor += 1
 					buffer.writef32(buff, cursor, value.X); cursor += 4
 					buffer.writef32(buff, cursor, value.Y); cursor += 4
 				elseif t == "CFrame" then
-					local cframesize = Miscellaneous.cframesize
+					local value: CFrame = value
+					local cframesize: number = Miscellaneous.cframesize
 					buff = expandbuffertosize(buff, cursor + cframesize + 1, info)
 
 					writebytesign(buff, cursor, 17, isdict, shiftseed); cursor += 1
 					Miscellaneous.writeCFrame(buff, cursor, value); cursor += cframesize
 				elseif t == "Ray" then
+					local value: Ray = value
 					buff = expandbuffertosize(buff, cursor + 25, info)
 
 					writebytesign(buff, cursor, 18, isdict, shiftseed); cursor += 1
 
-					local pos, dir = value.Origin, value.Direction
+					local pos: Vector3, dir: Vector3 = value.Origin, value.Direction
 					buffer.writef32(buff, cursor, pos.X); cursor += 4
 					buffer.writef32(buff, cursor, pos.Y); cursor += 4
 					buffer.writef32(buff, cursor, pos.Z); cursor += 4
@@ -407,7 +417,8 @@ local function write(
 					buffer.writef32(buff, cursor, dir.Y); cursor += 4
 					buffer.writef32(buff, cursor, dir.Z); cursor += 4
 				elseif t == "Enum" then
-					local size = 3 -- <u8> 19 | <u16> position
+					local value: Enum = value
+					local size: number = 3 -- <u8> 19 | <u16> position
 					if fullrbxenum then 
 						size = 2 + #RbxEnumEncoder.enumitem_to_type[value] 
 						-- <u8> byte | <u8> length | string
@@ -417,7 +428,8 @@ local function write(
 					writebytesign(buff, cursor, 19, isdict, shiftseed)
 					cursor = RbxEnumEncoder.encodeEnum(buff, cursor + 1, value)
 				elseif t == "EnumItem" then
-					local size = 3 -- <u8> 20 | <u16> position
+					local value: EnumItem = value
+					local size: number = 3 -- <u8> 20 | <u16> position
 					if fullrbxenum then 
 						size = 4 + #RbxEnumEncoder.enumitem_to_type[value] 
 						-- <u8> 20 | <u8> length | string | <u16> value
@@ -428,13 +440,15 @@ local function write(
 					writebytesign(buff, cursor, 20, isdict, shiftseed)
 					cursor = RbxEnumEncoder.encodeEnumItem(buff, cursor + 1, value)
 				elseif t == "NumberRange" then
+					local value: NumberRange = value
 					buff = expandbuffertosize(buff, cursor + 9, info)
 					writebytesign(buff, cursor, 21, isdict, shiftseed); cursor += 1
 
 					buffer.writef32(buff, cursor, value.Min); cursor += 4
 					buffer.writef32(buff, cursor, value.Max); cursor += 4
 				elseif t == "NumberSequence" then
-					local keypoints = value.Keypoints
+					local value: NumberSequence = value
+					local keypoints: {NumberSequenceKeypoint} = value.Keypoints
 
 					buff = expandbuffertosize(buff, cursor + 2 + #keypoints * 11, info)
 
@@ -447,7 +461,8 @@ local function write(
 						cursor = writenumber_compact(buff, cursor + 6, k.Envelope)
 					end
 				elseif t == "Color3" then
-					local r, g, b = value.R, value.G, value.B
+					local value: Color3 = value
+					local r: number, g: number, b: number = value.R, value.G, value.B
 
 					if color3always6bytes or (math.max(r, g, b) > 1 or math.min(r, g, b) < 0) then
 						buff = expandbuffertosize(buff, cursor + 7, info)
@@ -468,7 +483,8 @@ local function write(
 						cursor += 4
 					end
 				elseif t == "ColorSequence" then
-					local keypoints = value.Keypoints
+					local value: ColorSequence = value
+					local keypoints: {ColorSequenceKeypoint} = value.Keypoints
 
 					buff = expandbuffertosize(buff, cursor + 2 + #keypoints * 5, info)
 
@@ -486,6 +502,7 @@ local function write(
 						cursor += 5
 					end
 				elseif t == "UDim" then
+					local value: UDim = value
 					buff = expandbuffertosize(buff, cursor + 9, info)
 					writebytesign(buff, cursor, 26, isdict, shiftseed)
 
@@ -493,8 +510,9 @@ local function write(
 					buffer.writei32(buff, cursor + 5, value.Offset)
 					cursor += 9
 				elseif t == "UDim2" then
+					local value: UDim2 = value
 					buff = expandbuffertosize(buff, cursor + 17, info)
-					local x, y = value.X, value.Y
+					local x: UDim, y: UDim = value.X, value.Y
 
 					writebytesign(buff, cursor, 27, isdict, shiftseed)
 
@@ -504,8 +522,9 @@ local function write(
 					buffer.writei32(buff, cursor + 13, y.Offset)
 					cursor += 17
 				elseif t == "Rect" then
+					local value: Rect = value
 					buff = expandbuffertosize(buff, cursor + 17, info)
-					local min, max = value.Min, value.Max
+					local min: Vector2, max: Vector2 = value.Min, value.Max
 
 					writebytesign(buff, cursor, 28, isdict, shiftseed)
 
@@ -515,6 +534,7 @@ local function write(
 					buffer.writef32(buff, cursor + 13, max.Y)
 					cursor += 17
 				elseif t == "PhysicalProperties" then
+					local value: PhysicalProperties = value
 					buff = expandbuffertosize(buff, cursor + 21, info)
 					writebytesign(buff, cursor, 29, isdict, shiftseed)
 
@@ -525,11 +545,13 @@ local function write(
 					buffer.writef32(buff, cursor + 17, value.ElasticityWeight)
 					cursor += 21
 				elseif t == "BrickColor" then
+					local value: BrickColor = value
 					buff = expandbuffertosize(buff, cursor + 3, info)
 					writebytesign(buff, cursor, 30, isdict, shiftseed)
 					buffer.writeu16(buff, cursor + 1, value.Number)
 					cursor += 3
 				elseif t == "Vector3int16" then
+					local value: Vector3int16 = value
 					buff = expandbuffertosize(buff, cursor + 7, info)
 					writebytesign(buff, cursor, 31, isdict, shiftseed)
 					buffer.writei16(buff, cursor + 1, value.X)
@@ -537,16 +559,18 @@ local function write(
 					buffer.writei16(buff, cursor + 5, value.Z)
 					cursor += 7
 				elseif t == "Vector2int16" then
+					local value: Vector2int16 = value
 					buff = expandbuffertosize(buff, cursor + 5, info)
 					writebytesign(buff, cursor, 32, isdict, shiftseed)
 					buffer.writei16(buff, cursor + 1, value.X)
 					buffer.writei16(buff, cursor + 3, value.Y)
 					cursor += 5
 				elseif t == "Content" then
+					local value: Content = value
 
 					if value.SourceType == Enum.ContentSourceType.Uri then
-						local uri = value.Uri :: string
-						local num = string.match(uri, "%d+$")
+						local uri: string = value.Uri :: string
+						local num: string? = string.match(uri, "%d+$")
 
 						if num then
 							buff = expandbuffertosize(buff, cursor + 10, info)
@@ -556,7 +580,7 @@ local function write(
 							cursor += 10
 						else
 							-- im going to make a guess and say that the content links are NOT going past 254 bytes in length 😨
-							local len = #uri
+							local len: number = #uri
 							if len > 254 then
 								error("content uri length cannot be more than 254 bytes.", 0)
 							end
@@ -577,8 +601,10 @@ local function write(
 					end
 
 				elseif t == "Font" then
-					local family = value.Family
-					local num = string.match(family, "%d+$")
+					local value: Font = value
+
+					local family: string = value.Family
+					local num: string? = string.match(family, "%d+$")
 
 					if num then
 						buff = expandbuffertosize(buff, cursor + 13, info)
@@ -589,8 +615,8 @@ local function write(
 
 						cursor += 10
 					else
-						local familyname = string.match(family, "/(%w+).json$") or ""
-						local length = #familyname
+						local familyname: string = string.match(family, "/(%w+).json$") or ""
+						local length: number = #familyname
 
 						-- same here
 						if length > 254 then
@@ -608,17 +634,19 @@ local function write(
 					buffer.writeu16(buff, cursor, RbxEnumEncoder.enumitem_to_value[value.Weight])
 					buffer.writeu8(buff, cursor + 2, RbxEnumEncoder.enumitem_to_value[value.Style]); cursor += 3
 				elseif t == "DateTime" then
+					local value: DateTime = value
+
 					buff = expandbuffertosize(buff, cursor + 9, info)
 					writebytesign(buff, cursor, 35, isdict, shiftseed)
 					buffer.writef64(buff, cursor + 1, value.UnixTimestampMillis); cursor += 9
 				else
 					if referencelist then
-						local referenceposition = valuepositionlookup[value]
+						local referenceposition: number = valuepositionlookup[value]
 
 						if not referenceposition then
 							referenceposition = referencecount + 1
 
-							referencecount = referenceposition
+							referencecount = referenceposition :: any
 							valuepositionlookup[value] = referenceposition
 							referencelist[referenceposition] = value
 						end
@@ -648,7 +676,7 @@ local function write(
 			if k == arraywritelength then iternum = 2; isdoingdict = true end
 		end
 	end
-	
+
 	return buff, cursor
 end
 
@@ -681,7 +709,7 @@ return function(
 	if type(value) == "table" then
 		if shiftseed then math.randomseed(shiftseed) end
 		local referencelist = if allowreferences then {} else nil
-		
+
 		if next(value) == nil then
 			local b = buffer.create(1)
 			buffer.writeu8(b, 0, tryshift(101, shiftseed))
@@ -690,7 +718,7 @@ return function(
 
 			return b, referencelist
 		end
-		
+
 		local cursor: number = writeoffset or 0
 
 		local info: encodeinfo = {
@@ -701,13 +729,13 @@ return function(
 
 			allocatedsize = writingbuffersize;
 		}
-		
+
 		local buff = writingbuffer
 
 		if Profiler then
 			Profiler.Begin("Write")
 		end
-		
+
 		buff, cursor = write(buff, cursor, info, allowdeduplication, shiftseed)
 
 		buff = expandbuffertosize(buff, cursor + 1, info)
@@ -720,16 +748,16 @@ return function(
 
 		writingbuffer = buff
 		writingbuffersize = info.allocatedsize
-		
+
 		local truncatedbuffer = buffer.create(cursor + 2)
 		buffer.copy(truncatedbuffer, 0, buff, 0, cursor + 1)
-		
+
 		if shiftseed then math.randomseed(os.time()) end
 
 		if Profiler then
 			Profiler.End()
 		end
-		
+
 		return truncatedbuffer, referencelist
 	else
 		error(`expected a table to be encoded into a buffer, got {typeof(value)}`, 0)
