@@ -6,7 +6,6 @@ export type encodeinfo = {
 	referencelist: { any },
 	
 	allocatedsize: number;
-	currentsize: number;
 }
 
 export type decodeinfo = {
