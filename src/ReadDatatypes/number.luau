@@ -61,18 +61,4 @@ else
 	end
 end
 
-t.readnumber_compact = @native function(buff: buffer, byte: number, cursor: number): (number, number)
-	if byte == 11 then
-		return buffer.readf32(buff, cursor), cursor + 4
-	else 
-		local func = t[byte]
-		if func then return func(buff, byte, cursor) end 
-
-		local value = bytetovalue[byte]
-		if value then return value, cursor end
-
-		error(`{byte} is not a correct number byte`)
-	end
-end
-
 return t  

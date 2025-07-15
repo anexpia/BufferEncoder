@@ -1,115 +1,53 @@
 --!native
 --!optimize 2
+--!strict
 
---[[ 
-	## made by anexpia •…• ## 
+-- read float16 number from buffer
+local function readf16(buff: buffer, cursor: number): number
+	local n: number = buffer.readu16(buff, cursor)
+	local mantissa: number, exponent: number, sign: number = bit32.extract(n, 0, 10), 
+														 	 bit32.extract(n, 10, 5), 
+															 bit32.extract(n, 15, 1)
 
-	i dont think you can actually call this a float number converter but
-	if it works, its fine
-]]
-
-local function convert(num: number, bitcount: number, precisionbits: number)
-	local significandbits = (bitcount - precisionbits) - 1
-	local intlimit = (2^significandbits - 1)
-	
-	local sign = if num < 0 then 0b1 else 0b0
-	local int, fraction = math.modf(math.abs(num))
-	if int > intlimit then int = intlimit end 
-	-- ^ erroring is bad for encoder so removed error and replaced it with that
-
-	local wholebits, decimalbits = 32 - bit32.countlz(int), 0
-
-	local decimal = 0
-	if fraction > 0 and wholebits < significandbits then
-		decimalbits = math.min(significandbits - wholebits, (2^precisionbits) - 1)
-		
-		for i = 1, decimalbits do 
-			local result, remainder = math.modf(fraction * 2)
-			fraction = remainder 
-
-			if result == 1 then decimal += 2 ^ (i-1) end
-			if remainder == 0 then decimalbits = i; break end
+	if mantissa == 0b0000000000 then
+		if exponent == 0b00000 then return 0
+		elseif exponent == 0b11111 then 
+			return if sign == 1 then -math.huge else math.huge 
 		end
-	end
+	elseif exponent == 0b11111 then return 0/0 end 
+	
+	local value: number = ((mantissa / 1024) + 1) * 2 ^ (exponent - 15)
 
-	local significand = bit32.bor(decimal, bit32.lshift(int, decimalbits))
-	return bit32.bor(sign, decimalbits * 2, bit32.lshift(significand, 1 + precisionbits))
+	if sign == 1 then return -value end 
+	return value
 end
 
-local function deconvert(num, bitcount: number, precisionbits: number)
-	local significandbits = (bitcount - precisionbits) - 1
-	
-	local sign, decimalbits = bit32.extract(num, 0), bit32.extract(num, 1, precisionbits)
-	local wholenumber, decimal = 0, 0
-	
-	if decimalbits == 0 then
-		wholenumber = bit32.extract(num, 1 + precisionbits, significandbits)
-	else 
-		local offset = 1 + precisionbits
-		for i = 1, decimalbits do 
-			decimal += bit32.extract(num, offset + (i-1)) * 2^(-i)
+-- write number as float16 into buffer
+local function writef16(buff: buffer, cursor: number, value: number): ()
+	if value == 0 then buffer.writeu16(buff, cursor, 0)
+	elseif value >= 65520 then buffer.writeu16(buff, cursor, 0b0_11111_0000000000)
+	elseif value <= -65520 then buffer.writeu16(buff, cursor, 0b1_11111_0000000000)
+	elseif value ~= value then buffer.writeu16(buff, cursor, 0b0_11111_0000000001)
+	else
+		local sign: number = 0
+
+		if value < 0 then 
+			sign = 1 
+			value = -value 
 		end
 
-		if decimalbits < significandbits then
-			wholenumber = bit32.extract(num, offset + decimalbits, significandbits - decimalbits)
+		local mantissa: number, exponent: number = math.frexp(value)
+		if exponent < -14 then -- safeguard against tiny exponents like -20
+			buffer.writeu16(buff, cursor, 0)
+			return 
 		end
+
+		buffer.writeu16(buff, cursor, bit32.bor((mantissa * 2048 - 1023.5), (exponent + 14) * 2^10, (sign) * 2^15))
 	end
-
-	return ((-1) ^ sign) * (wholenumber + decimal)
-end
-
-local function convert_unsigned(num: number, bitcount: number, precisionbits: number)
-	local significandbits = (bitcount - precisionbits) 
-	local intlimit = (2^significandbits - 1)
-
-	local int, fraction = math.modf(math.abs(num))
-	if int > intlimit then int = intlimit end
-	-- ^ erroring is bad for encoder so removed error and replaced it with that
-	
-	local wholebits, decimalbits = 32 - bit32.countlz(int), 0
-
-	local decimal = 0
-	if fraction > 0 and wholebits < significandbits then
-		decimalbits = math.min(significandbits - wholebits, (2^precisionbits) - 1)
-
-		for i = 1, decimalbits do 
-			local result, remainder = math.modf(fraction * 2)
-			fraction = remainder 
-
-			if result == 1 then decimal += 2 ^ (i-1) end
-			if remainder == 0 then decimalbits = i; break end
-		end
-	end
-
-	local significand = bit32.bor(decimal, bit32.lshift(int, decimalbits))
-	return bit32.bor(decimalbits, bit32.lshift(significand, precisionbits))
-end
-
-local function deconvert_unsigned(num, bitcount: number, precisionbits: number)
-	local significandbits = (bitcount - precisionbits) 
-
-	local decimalbits = bit32.extract(num, 0, precisionbits)
-	local wholenumber, decimal = 0, 0
-
-	if decimalbits == 0 then
-		wholenumber = bit32.extract(num, precisionbits, significandbits)
-	else 
-		for i = 1, decimalbits do 
-			decimal += bit32.extract(num, precisionbits + (i-1)) * 2^(-i)
-		end
-
-		if decimalbits < significandbits then
-			wholenumber = bit32.extract(num, precisionbits + decimalbits, significandbits - decimalbits)
-		end
-	end
-
-	return (wholenumber + decimal)
 end
 
 
 return {
-	convert = convert;
-	deconvert = deconvert;
-	convert_unsigned = convert_unsigned;
-	deconvert_unsigned = deconvert_unsigned;
+	writef16 = writef16;
+	readf16 = readf16;
 }

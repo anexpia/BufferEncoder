@@ -6,12 +6,13 @@ local Module = script.Parent.Parent
 
 local Settings = require(Module.Settings)
 local Types = require(Module.Types)
-
+local Miscellaneous = require(Module.Miscellaneous)
 type datatypedecodinginfo = Types.datatypedecodinginfo
+
+local readf16 = Miscellaneous.readf16
 
 local numberbyte = 22
 local writebytesign
-local readnumber_compact = require(Module.ReadDatatypes.number).readnumber_compact
 
 local uI16_max = (2 ^ 16) - 1
 
@@ -23,9 +24,7 @@ return {
 		for i = 1, length do 
 			local time = math.clamp(buffer.readu16(buff, cursor) / uI16_max, 0, 1)
 			local value = buffer.readf32(buff, cursor + 2)
-			local envelope = buffer.readu8(buff, cursor + 6)
-			
-			envelope, cursor = readnumber_compact(buff, envelope, cursor + 7)
+			local envelope = readf16(buff, cursor + 6); cursor += 8
 			
 			tbl[i] = NumberSequenceKeypoint.new(time, value, envelope)
 		end

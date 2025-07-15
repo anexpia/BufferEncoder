@@ -27,7 +27,7 @@ return {
 		else
 			length -= 1
 			
-			local uri = buffer.readstring(buff, cursor, length); cursor += length
+			local uri = buffer.readstring(buff, cursor, length)
 			return Content.fromUri(uri), cursor + length
 		end
 	end;

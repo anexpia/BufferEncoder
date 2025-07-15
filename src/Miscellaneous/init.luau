@@ -130,35 +130,6 @@ return {
 
 	cframesize = BUFF_CFRAME_SIZE,
 	
-	writef16 = function(buf: buffer, offset: number, value: number)
-		buffer.writeu16(buf, offset, floatencoder.convert(value, 16, 4))
-	end,
-	
-	readf16 = function(buf: buffer, offset: number)
-		return floatencoder.deconvert(buffer.readu16(buf, offset), 16, 4)
-	end,
-	
-	writeu_f16 = function(buf: buffer, offset: number, value: number)
-		buffer.writeu16(buf, offset, floatencoder.convert_unsigned(value, 16, 4))
-	end,
-
-	readu_f16 = function(buf: buffer, offset: number)
-		return floatencoder.deconvert_unsigned(buffer.readu16(buf, offset), 16, 4)
-	end,
-	
-	writef8 = function(buf: buffer, offset: number, value: number)
-		buffer.writeu8(buf, offset, floatencoder.convert(value, 8, 3))
-	end,
-
-	readf8 = function(buf: buffer, offset: number)
-		return floatencoder.deconvert(buffer.readu8(buf, offset), 8, 3)
-	end,
-	
-	writeu_f8 = function(buf: buffer, offset: number, value: number)
-		buffer.writeu8(buf, offset, floatencoder.convert_unsigned(value, 8, 3))
-	end,
-
-	readu_f8 = function(buf: buffer, offset: number)
-		return floatencoder.deconvert_unsigned(buffer.readu8(buf, offset), 8, 3)
-	end,
+	writef16 = floatencoder.writef16;
+	readf16 = floatencoder.readf16;
 }

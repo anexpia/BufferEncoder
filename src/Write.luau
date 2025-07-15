@@ -19,7 +19,7 @@
 -- 19 -> enum < polymorphic - depends on setting 'rbxenum_behavior' >
 -- 20 -> enumitem < polymorphic - depends on setting 'rbxenum_behavior' >
 -- 21 -> numberrange (2 f32)
--- 22 -> numbersequence (variable)
+-- 22 -> numbersequence
 -- 23 -> color3 (u8)
 -- 24 -> color3 (f16)
 -- 25 -> colorsequence
@@ -69,8 +69,12 @@ local Types = require(script.Parent.Types)
 type encodeinfo = Types.encodeinfo
 
 local valuetobyte = Enums.valuetobyte
-local color3always6bytes = Settings.color3always6bytes
-local fullrbxenum = Settings.rbxenum_behavior == 'full'
+local color3always6bytes: boolean = Settings.color3always6bytes
+local fullrbxenum: boolean = Settings.rbxenum_behavior == 'full'
+
+local writef16 = Miscellaneous.writef16
+local writeCFrame = Miscellaneous.writeCFrame
+local CFrameSize = Miscellaneous.cframesize
 
 -- shift the byte associated with a value/datatype by the number given
 local tryshift = function(v: number, shiftseed: number?): number
@@ -99,44 +103,6 @@ local function expandbuffertosize(buff: buffer, newsize: number, info: encodeinf
 	end
 
 	return buff
-end
-
--- writes numbers present within other datatypes such as numbersequence
-local function writenumber_compact(buff: buffer, cursor: number, value: number): number
-	local enumbyte = valuetobyte[value]
-
-	if enumbyte then
-		buffer.writeu8(buff, cursor, enumbyte)
-	elseif value ~= value then
-		buffer.writeu8(buff, cursor, 108)
-	elseif (value % 1) ~= 0 then -- float32
-		buffer.writeu8(buff, cursor, 11)
-		buffer.writef64(buff, cursor + 1, value)
-
-		return cursor + 9
-	else
-		local abs = math.abs(value)
-		local offset = if value < 0 then 3 else 0
-
-		if abs <= 0xFF then -- uint8
-			buffer.writeu8(buff, cursor, 5 + offset)
-			buffer.writeu8(buff, cursor + 1, abs)
-
-			return cursor + 2
-		elseif abs <= 0xFFFF then -- uint16
-			buffer.writeu8(buff, cursor, 6 + offset)
-			buffer.writeu16(buff, cursor + 1, abs)
-
-			return cursor + 3
-		else
-			buffer.writeu8(buff, cursor, 7 + offset)
-			buffer.writeu32(buff, cursor + 1, abs)
-
-			return cursor + 5
-		end
-	end
-
-	return cursor + 1
 end
 
 -- write every value into the buffer
@@ -398,11 +364,10 @@ local function write(
 					buffer.writef32(buff, cursor, value.Y); cursor += 4
 				elseif t == "CFrame" then
 					local value: CFrame = value
-					local cframesize: number = Miscellaneous.cframesize
-					buff = expandbuffertosize(buff, cursor + cframesize + 1, info)
+					buff = expandbuffertosize(buff, cursor + CFrameSize + 1, info)
 
 					writebytesign(buff, cursor, 17, isdict, shiftseed); cursor += 1
-					Miscellaneous.writeCFrame(buff, cursor, value); cursor += cframesize
+					writeCFrame(buff, cursor, value); cursor += CFrameSize
 				elseif t == "Ray" then
 					local value: Ray = value
 					buff = expandbuffertosize(buff, cursor + 25, info)
@@ -450,7 +415,7 @@ local function write(
 					local value: NumberSequence = value
 					local keypoints: {NumberSequenceKeypoint} = value.Keypoints
 
-					buff = expandbuffertosize(buff, cursor + 2 + #keypoints * 11, info)
+					buff = expandbuffertosize(buff, cursor + 2 + #keypoints * 8, info)
 
 					writebytesign(buff, cursor, 22, isdict, shiftseed);
 					buffer.writeu8(buff, cursor + 1, #keypoints); cursor += 2
@@ -458,7 +423,8 @@ local function write(
 					for _, k in keypoints do
 						buffer.writeu16(buff, cursor, math.round(k.Time * uI16_max))
 						buffer.writef32(buff, cursor + 2, k.Value)
-						cursor = writenumber_compact(buff, cursor + 6, k.Envelope)
+						
+						writef16(buff, cursor + 6, k.Envelope); cursor += 8
 					end
 				elseif t == "Color3" then
 					local value: Color3 = value
@@ -469,9 +435,9 @@ local function write(
 
 						-- one or more of values is out of 1 byte limit, so this encodes as 2 bytes each
 						writebytesign(buff, cursor, 24, isdict, shiftseed)
-						Miscellaneous.writef16(buff, cursor + 1, r)
-						Miscellaneous.writef16(buff, cursor + 3, g)
-						Miscellaneous.writef16(buff, cursor + 5, b)
+						writef16(buff, cursor + 1, r)
+						writef16(buff, cursor + 3, g)
+						writef16(buff, cursor + 5, b)
 						cursor += 7
 					else
 						buff = expandbuffertosize(buff, cursor + 4, info)

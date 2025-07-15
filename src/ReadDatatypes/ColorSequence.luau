@@ -10,7 +10,6 @@ local Types = require(Module.Types)
 type datatypedecodinginfo = Types.datatypedecodinginfo
 
 local colorbyte = 25
-local writebytesign, scannumber_compact, writenumber_compact, readnumber_compact
 
 local uI16_max = (2 ^ 16) - 1
 

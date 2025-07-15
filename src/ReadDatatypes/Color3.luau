@@ -9,6 +9,7 @@ local Types = require(Module.Types)
 local Miscellaneous = require(Module.Miscellaneous)
 
 local color3always6bytes = Settings.color3always6bytes
+local readf16 = Miscellaneous.readf16
 
 type datatypedecodinginfo = Types.datatypedecodinginfo
 
@@ -24,7 +25,7 @@ return {
 	end;
 
 	[f16colorbyte] = @native function(buff: buffer, byte: number, cursor: number): (Color3, number)
-		local r, g, b = Miscellaneous.readf16(buff, cursor), Miscellaneous.readf16(buff, cursor + 2), Miscellaneous.readf16(buff, cursor + 4)
+		local r, g, b = readf16(buff, cursor), readf16(buff, cursor + 2), readf16(buff, cursor + 4)
 		return Color3.new(r, g, b), cursor + 6
 	end;
 } :: datatypedecodinginfo
