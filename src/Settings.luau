@@ -10,7 +10,7 @@ local t = {
 }
 
 for att, value in Encoder:GetAttributes() do 
-    if t[att] then
+    if t[att] ~= nil then
         if type(value) == type(t[att]) then t[att] = value
         else warn(`[BUFFERENCODER] {typeof(value)} is not a valid type for the setting {att}`) end
     end

@@ -1,14 +1,6 @@
 {
   "name": "bufferencoder",
   "tree": {
-    "$className": "DataModel",
-
-    "ReplicatedStorage": {
-      "$className": "ReplicatedStorage",
-      
-      "BufferEncoder": {
-        "$path": "src"
-      }
-    }
+    "$path": "src"
   }
 }
