@@ -329,20 +329,23 @@ local function write(
 					local length: number = buffer.len(value)
 
 					if length <= 0xFF then
-						buff = expandbuffertosize(buff, cursor + 2, info)
+						buff = expandbuffertosize(buff, cursor + 2 + length, info)
 
 						writebytesign(buff, cursor, 12, isdict, shiftseed)
-						buffer.writeu8(buff, cursor + 1, length); cursor += 2
+						buffer.writeu8(buff, cursor + 1, length)
+						cursor += 2
 					elseif length <= 0xFFFF then
-						buff = expandbuffertosize(buff, cursor + 3, info)
+						buff = expandbuffertosize(buff, cursor + 3 + length, info)
 
 						writebytesign(buff, cursor, 13, isdict, shiftseed)
-						buffer.writeu16(buff, cursor + 1, length); cursor += 3
+						buffer.writeu16(buff, cursor + 1, length)
+						cursor += 3
 					else
-						buff = expandbuffertosize(buff, cursor + 5, info)
+						buff = expandbuffertosize(buff, cursor + 5 + length, info)
 
 						writebytesign(buff, cursor, 14, isdict, shiftseed)
-						buffer.writeu32(buff, cursor + 1, length); cursor += 5
+						buffer.writeu32(buff, cursor + 1, length)
+						cursor += 5
 					end
 
 					buffer.copy(buff, cursor, value)
