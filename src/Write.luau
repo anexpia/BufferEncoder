@@ -74,7 +74,9 @@ local fullrbxenum: boolean = Settings.rbxenum_behavior == 'full'
 
 local writef16 = Miscellaneous.writef16
 local writeCFrame = Miscellaneous.writeCFrame
-local CFrameSize = Miscellaneous.cframesize
+local canCompressCFrame = Miscellaneous.canCompressCFrame
+local CFrameSizeNoID = Miscellaneous.cframesize_no_id
+local CFrameSizeWithID = Miscellaneous.cframesize_with_id
 
 -- shift the byte associated with a value/datatype by the number given
 local tryshift = function(v: number, shiftseed: number?): number
@@ -367,10 +369,13 @@ local function write(
 					buffer.writef32(buff, cursor, value.Y); cursor += 4
 				elseif t == "CFrame" then
 					local value: CFrame = value
-					buff = expandbuffertosize(buff, cursor + CFrameSize + 1, info)
+					local canCompress, rotationID = canCompressCFrame(value)
+
+					local size = (canCompress and CFrameSizeWithID or CFrameSizeNoID) + 1
+					buff = expandbuffertosize(buff, cursor + size, info)
 
 					writebytesign(buff, cursor, 17, isdict, shiftseed); cursor += 1
-					writeCFrame(buff, cursor, value); cursor += CFrameSize
+					writeCFrame(buff, cursor, value, rotationID); cursor += size
 				elseif t == "Ray" then
 					local value: Ray = value
 					buff = expandbuffertosize(buff, cursor + 25, info)
