@@ -26,7 +26,7 @@ If `writestart` is provided, table content writing will begin from the number pr
 -    **allowreferences: boolean** -- if enabled, return a table containing the values it couldn't encode alongside the buffer.
 -    **shiftseed: number** -- the type bytes of values are shuffled using the seed.
 -    **rbxenum_behavior: "full" | "compact"** -- override for the default setting in settings module.
--    **color3always6bytes: boolean** -- override for the default setting in settings module.\
+-    **color3always6bytes: boolean** -- override for the default setting in settings module.
 
 }
 
@@ -42,8 +42,8 @@ Parameters should be consistent with **Encoder.write()** so that you don't encou
 -    **allowdeduplication: boolean** -- if the buffer was written with deduplication enabled, **this must be enabled.**
 -    **references: {any}** -- table of values that couldn't be encoded which is returned by encoder.write()
 -    **shiftseed: number** -- the type bytes of values are unshuffled using the seed.
--    **rbxenum_behavior: "full" | "compact"** -- override for the default setting in settings module.\
--    **sanitize_nanandinf: boolean** -- override for the default setting in settings module.\
+-    **rbxenum_behavior: "full" | "compact"** -- override for the default setting in settings module.
+-    **sanitize_nanandinf: boolean** -- override for the default setting in settings module.
 
 }
 
