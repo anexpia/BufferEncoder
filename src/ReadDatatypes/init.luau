@@ -26,5 +26,27 @@ for _, t in script:GetChildren() do
 end
 
 table.clear(bytetodatatype)
+bytetodatatype = nil :: any
+
+local enumbyte = 19
+local enumitembyte = 20
+
+--                            math.huge           -math.huge             nan
+local f106, f107, f108 = bytetofunction[106], bytetofunction[107], bytetofunction[108]
+local f103 = bytetofunction[103] -- returns 0
+
+function bytetofunction.adjustforsettings(enumbehavior, sanitize_nanandinf: boolean?)
+	bytetofunction[enumbyte] = enumbehavior.decodeEnum 
+	bytetofunction[enumitembyte] = enumbehavior.decodeEnumItem
+
+	if sanitize_nanandinf then 
+		for i = 106, 108 do 
+			bytetofunction[i] = f103
+		end
+	else 
+		bytetofunction[106], bytetofunction[107], bytetofunction[108] = f106, f107, f108
+	end
+
+end
 
 return bytetofunction

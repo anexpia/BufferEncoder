@@ -2,25 +2,11 @@
 
 --[[ 
 	## made by anexpia •…• ## 
-
-	this has 2 behaviors currently.
-	>  "full"
-		encodes the enums as <19> <u8 length> <string>
-		enumitems are <20> <u8 length> <string> <u16 value> 
-
-		* encoded values are deduplicated, so if the same enum & enumitem are encoded multiple times
-		it will not cost the same to encode it each time
-
-	> "compact" *default behavior*
-		this should ONLY BE USED for sending the enums & enumitems between remotes!!!
-		the order of the enum & enumitem table is not guaranteed to be consistent between
-		every version and such you will definitely encounter bugs if you use this for saving data
-
-		* no deduplication since there's no benefit, as this saves as 3 bytes
 ]]
 
 local RS = game:GetService("RunService")
 local Settings = require(script.Parent.Settings)
+local SyncingEnabled = Settings.serverclientsyncing
 
 local enumitem_to_type = {}
 local enumitem_to_value = {}
@@ -29,6 +15,9 @@ local enumitem_to_value = {}
 local exposed = {
 	enumitem_to_type = enumitem_to_type;
 	enumitem_to_value = enumitem_to_value;
+
+	compact = {},
+	full = {},
 }
 
 for _, enum in Enum:GetEnums() do 
@@ -42,9 +31,12 @@ for _, enum in Enum:GetEnums() do
 	end
 end
 
--- encode enums as <19> <u8 length> <string>
--- encode enumitems as <20> <u8 length> <string> <u16 value>
-if Settings.rbxenum_behavior == "full" then
+do
+	-- encode enums as <19> <u8 length> <string>
+	-- encode enumitems as <20> <u8 length> <string> <u16 value>
+
+	local full = exposed.full
+
 	local nametoenum = {}
 	for _, v in Enum:GetEnums() do
 		nametoenum[tostring(v)] = v
@@ -54,7 +46,7 @@ if Settings.rbxenum_behavior == "full" then
 	local enum_FromValue = (Enum.Material :: any).FromValue
 
 	@native
-	function exposed.encodeEnum(buf: buffer, offset: number, enum: Enum): number
+	function full.encodeEnum(buf: buffer, offset: number, enum: Enum): number
 		local name = enumitem_to_type[enum]
 		local length = #name
 
@@ -65,15 +57,15 @@ if Settings.rbxenum_behavior == "full" then
 	end
 
 	@native
-	function exposed.encodeEnumItem(buf: buffer, offset: number, enumitem: EnumItem): number
-		offset = exposed.encodeEnum(buf, offset, enumitem :: any)
+	function full.encodeEnumItem(buf: buffer, offset: number, enumitem: EnumItem): number
+		offset = full.encodeEnum(buf, offset, enumitem :: any)
 		buffer.writeu16(buf, offset, enumitem_to_value[enumitem])
 
 		return offset + 2
 	end
 
 	@native
-	function exposed.decodeEnum(buf: buffer, byte: number, cursor: number): (Enum, number, boolean?)
+	function full.decodeEnum(buf: buffer, byte: number, cursor: number): (Enum, number, boolean?)
 		local length = buffer.readu8(buf, cursor); cursor += 1
 		local name = buffer.readstring(buf, cursor, length)
 
@@ -81,22 +73,25 @@ if Settings.rbxenum_behavior == "full" then
 	end
 
 	@native
-	function exposed.decodeEnumItem(buf: buffer, byte: number, cursor: number): (EnumItem, number, boolean?)
-		local enum, newcursor = exposed.decodeEnum(buf, byte, cursor)
+	function full.decodeEnumItem(buf: buffer, byte: number, cursor: number): (EnumItem, number, boolean?)
+		local enum, newcursor = full.decodeEnum(buf, byte, cursor)
 		local value = buffer.readu16(buf, newcursor)
 
 		return enum and enum_FromValue(enum, value), newcursor + 2, true
 	end
+end
 
+do
 	-- encode enums as <19> <u16 index>
 	-- encode enumitems as <20> <u16 index>
 	-- syncing table between client & server is necessary to avoid issues due to version mismatch
-elseif Settings.rbxenum_behavior == "compact" then
+
 	local enumarray: { Enum } = {}
 	local enumitemarray: { EnumItem } = {}
 	local valuelookup: { [any]: number } = {}
 
-	local SyncingEnabled = Settings.serverclientsyncing
+	local compact = exposed.compact
+
 	local IsSyncOrigin = if SyncingEnabled then RS:IsServer() else true
 
 	if IsSyncOrigin then
@@ -115,8 +110,6 @@ elseif Settings.rbxenum_behavior == "compact" then
 			request.OnServerInvoke = function(player, v)
 				return tosend1, tosend2
 			end
-		else 
-			tosend1, tosend2 = nil, nil
 		end
 
 		do
@@ -144,20 +137,11 @@ elseif Settings.rbxenum_behavior == "compact" then
 		task.spawn(function()
 			local request = script:WaitForChild("request")
 
-			local function addtoarray(toarray, fromdict, todict)
-				local lastnum = 0
-				
+			local function addtoarray(toarray, fromdict)
 				for k, v in fromdict do
 					k = tonumber(k)
 					toarray[k] = v
 					valuelookup[v] = k
-
-					lastnum = math.max(lastnum, k)
-				end
-
-				-- fill gaps
-				for i = 1, lastnum do
-					if toarray[i] == nil then toarray[i] = false end
 				end
 			end
 
@@ -177,28 +161,37 @@ elseif Settings.rbxenum_behavior == "compact" then
 	end
 
 	@native
-	function exposed.encodeEnum(buf: buffer, offset: number, value: Enum): number
+	function compact.encodeEnum(buf: buffer, offset: number, value: Enum): number
 		local position = valuelookup[value]
 		buffer.writeu16(buf, offset, position or 0) 
 
 		return offset + 2
 	end
 
-	exposed.encodeEnumItem = (exposed.encodeEnum :: any) :: (buf: buffer, offset: number, value: EnumItem) -> number
+	compact.encodeEnumItem = (compact.encodeEnum :: any) :: (buf: buffer, offset: number, value: EnumItem) -> number
 
 	@native
-	function exposed.decodeEnum(buf: buffer, byte: number, cursor: number): (Enum, number)
+	function compact.decodeEnum(buf: buffer, byte: number, cursor: number): (Enum, number)
 		local position = buffer.readu16(buf, cursor)
 		return enumarray[position], cursor + 2
 	end
 
 	@native
-	function exposed.decodeEnumItem(buf: buffer, byte: number, cursor: number): (EnumItem, number)
+	function compact.decodeEnumItem(buf: buffer, byte: number, cursor: number): (EnumItem, number)
 		local position = buffer.readu16(buf, cursor)
 		return enumitemarray[position], cursor + 2
 	end
-else
-	error(`{Settings.rbxenum_behavior} is not a valid enum encoding behavior, options are ('full', 'compact')`, 0)
+end
+
+function exposed.getBehaviorFromSetting(operationsettings): (typeof(exposed.full), "full" | "compact")
+	local value = operationsettings.rbxenum_behavior or Settings.rbxenum_behavior
+	local enumbehavior = exposed[value]
+
+	if enumbehavior == nil then 
+		error(`{value} is an invalid value for rbx_enumbehavior, options are 'full' / 'compact'`, 0)
+	end 
+
+	return enumbehavior, value
 end
 
 return exposed

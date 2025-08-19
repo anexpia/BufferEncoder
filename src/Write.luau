@@ -67,10 +67,9 @@ local Settings = require(script.Parent.Settings)
 local Types = require(script.Parent.Types)
 
 type encodeinfo = Types.encodeinfo
+type WriteSettings = Types.WriteSettings
 
 local valuetobyte = Enums.valuetobyte
-local color3always6bytes: boolean = Settings.color3always6bytes
-local fullrbxenum: boolean = Settings.rbxenum_behavior == 'full'
 
 local writef16 = Miscellaneous.writef16
 local writeCFrame = Miscellaneous.writeCFrame
@@ -109,10 +108,17 @@ end
 local function write(
 	buff: buffer,
 	cursor: number,
-	info: encodeinfo,
-	dedupallowed: boolean?,
-	shiftseed: number?
+	info: encodeinfo
 ): (buffer, number)
+
+	local writesettings = info.settings
+
+	local shiftseed: number?, dedupallowed = writesettings.shiftseed, writesettings.allowdeduplication
+	local color3always6bytes = writesettings.color3always6bytes
+	if color3always6bytes == nil then color3always6bytes = Settings.color3always6bytes end
+
+	local enumbehavior, enumbehaviortype = RbxEnumEncoder.getBehaviorFromSetting(writesettings)
+	local fullrbxenum: boolean = enumbehaviortype == 'full'
 
 	local scancount: number = 1
 	local deduplicatedcount: number = 0
@@ -245,7 +251,6 @@ local function write(
 						local abs = math.abs(value)
 						if (value % 1) ~= 0 or abs > 0xFFFFFFFF then -- float64
 							buff = expandbuffertosize(buff, cursor + 9, info)
-
 
 							writebytesign(buff, cursor, 11, isdict, shiftseed)
 							buffer.writef64(buff, cursor + 1, value); cursor += 9
@@ -394,7 +399,7 @@ local function write(
 
 					buff = expandbuffertosize(buff, cursor + size, info)
 					writebytesign(buff, cursor, 19, isdict, shiftseed)
-					cursor = RbxEnumEncoder.encodeEnum(buff, cursor + 1, value)
+					cursor = enumbehavior.encodeEnum(buff, cursor + 1, value)
 				elseif t == "EnumItem" then
 					local value: EnumItem = value
 					local size: number = 3 -- <u8> 20 | <u16> position
@@ -406,7 +411,7 @@ local function write(
 					buff = expandbuffertosize(buff, cursor + size, info)
 
 					writebytesign(buff, cursor, 20, isdict, shiftseed)
-					cursor = RbxEnumEncoder.encodeEnumItem(buff, cursor + 1, value)
+					cursor = enumbehavior.encodeEnumItem(buff, cursor + 1, value)
 				elseif t == "NumberRange" then
 					local value: NumberRange = value
 					buff = expandbuffertosize(buff, cursor + 9, info)
@@ -661,23 +666,29 @@ type BenchmarkerProfiler = {
 --[[
 returns the table given encoded as a buffer, and the size of buffer
 
-param - value : the table to encode
-param - writeoffset : writing starts from the offset given.
-param - allowreferences : if enabled, it returns a table containing the values it couldn't encode alongside the first 2 values.
-param - allowdeduplication : attempt to deduplicate repeated values if enabled to reduce buffer size
-param - shiftseed : the type bytes of values are shuffled using the seed.
+<em>param</em> - value : the table to encode
+<em>param</em> - writeoffset : writing starts from the offset given.
+<em>param</em> - writesettings : {
+. <strong>allowdeduplication: boolean</strong> -- attempt to deduplicate repeated values if enabled to reduce buffer size
+. <strong>allowreferences: boolean</strong> -- if enabled, return a table containing the values it couldn't encode alongside the buffer.
+. <strong>shiftseed: number</strong> -- the type bytes of values are shuffled using the seed.
+. <strong>rbxenum_behavior: "full" | "compact"</strong> -- override for the default setting.
+. <strong>color3always6bytes: boolean</strong> -- override for the default setting.
+}
 ]]
 return function(
 	value: { [any]: any },
 	writeoffset: number?,
-	allowreferences: boolean?,
-	allowdeduplication: boolean?,
-	shiftseed: number?,
+	writesettings: WriteSettings?,
 	Profiler: BenchmarkerProfiler?
 ): (buffer, { any }?)
 	if type(value) == "table" then
+
+		local writesettings: WriteSettings = writesettings or (Settings :: any)
+		local shiftseed = writesettings.shiftseed
+
 		if shiftseed then math.randomseed(shiftseed) end
-		local referencelist = if allowreferences then {} else nil
+		local referencelist = if writesettings.allowreferences then {} else nil
 
 		if next(value) == nil then
 			local b = buffer.create(1)
@@ -695,7 +706,7 @@ return function(
 			scanlist = {value},
 
 			referencelist = referencelist,
-
+			settings = writesettings,
 			allocatedsize = writingbuffersize;
 		}
 
@@ -705,7 +716,7 @@ return function(
 			Profiler.Begin("Write")
 		end
 
-		buff, cursor = write(buff, cursor, info, allowdeduplication, shiftseed)
+		buff, cursor = write(buff, cursor, info)
 
 		buff = expandbuffertosize(buff, cursor + 1, info)
 		writebytesign(buff, cursor, 0, nil, shiftseed)
@@ -729,6 +740,6 @@ return function(
 
 		return truncatedbuffer, referencelist
 	else
-		error(`expected a table to be encoded into a buffer, got {typeof(value)}`, 0)
+		error(`Expected a table to be encoded into a buffer, got {typeof(value)}`, 0)
 	end
 end

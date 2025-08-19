@@ -4,10 +4,8 @@
 -- quaternion stuff from https://devforum.roblox.com/t/introducing-luau-buffer-type-beta/2724894/105?u=anexpia
 -- modified a bit to be more performant when encoding 
 
-local Settings = require(script.Parent.Settings)
+local Types = require(script.Parent.Types)
 local floatencoder = require(script.floatencoder)
-
-local SanitizingEnabled = Settings.sanitize_nanandinf
 
 local FP_EPSILON = 1e-6
 local I16_PRECISION = 32767                 -- int16 range { -32,786, 32,767 }
@@ -104,12 +102,12 @@ local function write(buf: buffer, offset: number, input: CFrame)
 	buffer.writei16(buf, offset + 17, q2)
 end
 
-local function read(buf: buffer, byte: number, offset: number): (CFrame, number)
+local function read(buf: buffer, byte: number, offset: number, info: Types.ReadSettings): (CFrame, number)
 	local x = buffer.readf32(buf, offset)
 	local y = buffer.readf32(buf, offset + 4)
 	local z = buffer.readf32(buf, offset + 8)
 
-	if SanitizingEnabled then
+	if info.sanitize_nanandinf then
 		if (x / x) ~= 1 then x = 0 end
 		if (y / y) ~= 1 then y = 0 end
 		if (z / z) ~= 1 then z = 0 end

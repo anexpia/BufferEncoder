@@ -7,15 +7,13 @@ local Module = script.Parent.Parent
 local Settings = require(Module.Settings)
 local Types = require(Module.Types)
 
-local SanitizingEnabled = Settings.sanitize_nanandinf
-
 type datatypedecodinginfo = Types.datatypedecodinginfo
 
 local raybyte = 18
 local writebytesign
 
 return {
-	[raybyte] = @native function(buff: buffer, byte: number, cursor: number): (Ray, number)
+	[raybyte] = @native function(buff: buffer, byte: number, cursor: number, info: Types.decodeinfo): (Ray, number)
 		local ox = buffer.readf32(buff, cursor); cursor += 4
 		local oy = buffer.readf32(buff, cursor); cursor += 4
 		local oz = buffer.readf32(buff, cursor); cursor += 4
@@ -23,7 +21,7 @@ return {
 		local dy = buffer.readf32(buff, cursor); cursor += 4
 		local dz = buffer.readf32(buff, cursor); cursor += 4
 
-		if SanitizingEnabled then
+		if info.sanitize_nanandinf then
             if (ox / ox) ~= 1 then ox = 0 end
             if (oy / oy) ~= 1 then oy = 0 end
             if (oz / oz) ~= 1 then oz = 0 end

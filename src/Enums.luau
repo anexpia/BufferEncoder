@@ -28,9 +28,9 @@ local bytetovalue: {[number]: any} = {
 	[103] = 0,
 	[104] = 1,
 	[105] = -1,
-	[106] = if Settings.sanitize_nanandinf then 0 else math.huge,
-	[107] = if Settings.sanitize_nanandinf then 0 else -math.huge,
-	[108] = if Settings.sanitize_nanandinf then 0 else 0 / 0,
+	[106] = math.huge,
+	[107] = -math.huge,
+	[108] = 0 / 0,
 }
 
 local valuetobyte: {[any]: number} = {

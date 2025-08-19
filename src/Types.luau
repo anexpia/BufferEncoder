@@ -1,23 +1,44 @@
-type table = { [any]: any }
-export type encodeinfo = {
-	valuepositionlookup: {[any]: any};
+type anyTable = { [any]: any }
 
-	scanlist: { {[any]: any} },
+export type encodeinfo = {
+	valuepositionlookup: anyTable;
+
+	settings: WriteSettings,
+	scanlist: { anyTable },
 	referencelist: { any },
 	
 	allocatedsize: number;
 }
 
 export type decodeinfo = {
-    bufferstring: string?;
-	deduplicationtable: { any };
+	sanitize_nanandinf: boolean?,
+
 	references: { any }?;
-	tables:  { table };
+
+	deduplicationtable: { any };
+	tables: { anyTable };
+}
+
+export type WriteSettings = {
+	allowdeduplication: boolean?,
+	allowreferences: boolean?,
+	shiftseed: number?,
+
+	rbxenum_behavior: "full" | "compact" | nil,
+	color3always6bytes: boolean?,
+}
+
+export type ReadSettings = {
+	allowdeduplication: boolean?,
+	references: { any }?,
+	shiftseed: number?,
+
+	rbxenum_behavior: "full" | "compact" | nil,
+	sanitize_nanandinf: boolean?,
 }
 
 export type datatypedecodinginfo = {
 	[number]: (buff: buffer, byte: number, cursor: number, info: decodeinfo) -> (any, number, boolean?),
-
 }
 
 return 0

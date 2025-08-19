@@ -1,18 +1,39 @@
 --!native
 --!optimize 2
+--!nolint LocalShadow
 
 --[[ ## made by anexpia •…• ## ]]
 
-local Datatypes = require(script.Parent.ReadDatatypes)
-local Types = require(script.Parent.Types)
+local Encoder = script.Parent
+
+local Datatypes = require(Encoder.ReadDatatypes)
+local RbxEnumEncoder = require(Encoder.RbxEnumEncoder)
+local Settings = require(Encoder.Settings)
+local Types = require(Encoder.Types)
+
+type ReadSettings = Types.ReadSettings
+
+local defaultwritingtable = {}
 
 --[[
 Decodes the buffer created by encoder.write()
-parameters should be consistent with encoder.write().
-]]
 
-local defaultwritingtable = {}
-return function(buff: buffer, readstart: number?, references: { any }?, dedupenabled: boolean?, shiftseed: number?): { [any]: any }
+<em>param</em> - buff : the buffer to decode
+<em>param</em> - readstart : reading starts from the offset given.
+<em>param</em> - readsettings : {
+. <strong>allowdeduplication: boolean</strong> -- if the buffer was written with deduplication enabled
+. <strong>references: {any}</strong> -- table of values that couldn't be encoded which is returned by encoder.write()
+. <strong>shiftseed: number</strong> -- the type bytes of values are unshuffled using the seed.
+. <strong>rbxenum_behavior: "full" | "compact"</strong> -- override for the default setting.
+. <strong>sanitize_nanandinf: boolean</strong> -- override for the default setting.
+}
+]]
+return function(buff: buffer, readstart: number?, readsettings: ReadSettings?): { [any]: any }
+	local readsettings: ReadSettings = readsettings or Settings
+
+	local shiftseed = readsettings.shiftseed
+	local dedupenabled = readsettings.allowdeduplication
+
 	local cursor = readstart or 0
 	local isdoingdeduplication_old = false
 
@@ -34,6 +55,12 @@ return function(buff: buffer, readstart: number?, references: { any }?, dedupena
 		if isdoingdeduplication_old then dedupenabled = false end
 	end
 
+	local enumbehavior = RbxEnumEncoder.getBehaviorFromSetting(readsettings)
+	local sanitize_nanandinf = readsettings.sanitize_nanandinf
+	if sanitize_nanandinf == nil then sanitize_nanandinf = Settings.sanitize_nanandinf end
+
+	Datatypes.adjustforsettings(enumbehavior, sanitize_nanandinf)
+
 	local deduplicationindex = 0
 	local deduplicationtable = if dedupenabled then {} else nil
 	local currenttable = {}
@@ -49,9 +76,10 @@ return function(buff: buffer, readstart: number?, references: { any }?, dedupena
 	local currentindex = 0
 
 	local info: Types.decodeinfo = {
-		stringform = nil,
+		sanitize_nanandinf = sanitize_nanandinf,
+		references = readsettings.references,
+
 		deduplicationtable = deduplicationtable,
-		references = references,
 		tables = formedtables,
 	}
 
@@ -138,5 +166,5 @@ return function(buff: buffer, readstart: number?, references: { any }?, dedupena
 
 	if shiftseed then math.randomseed(os.time()) end
 
-	error("buffer is not terminated with zero byte", 0)
+	error("buffer is not terminated with '0' byte", 0)
 end
