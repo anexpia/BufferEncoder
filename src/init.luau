@@ -51,10 +51,10 @@ v---v---v---v---v---v---v---v settings v---v---v---v---v---v---v---v
 > color3always6bytes: boolean >> default false
 	this toggles if color3 components are always saved as float16 numbers
 
-> rbxenum_behavior: string ( 'full' | 'compact' ) >> default 'compact'
+> rbxenum_behavior: string ( 'full' | 'compact' ) >> default 'full'
 	this has 2 behaviors currently.
 
-	>  "full"
+	>  "full" *default behavior*
 		encodes the enums as <19> <u8 length> <string>
 		enumitems are <20> <u8 length> <string> <u16 value> 
 
@@ -63,7 +63,7 @@ v---v---v---v---v---v---v---v settings v---v---v---v---v---v---v---v
 		* encoded values are deduplicated if allowed, so if the same enum & enumitem are encoded multiple times
 		  it will not cost the same to encode it each time
 
-	> "compact" *default behavior*
+	> "compact"
 		this should ONLY BE USED for sending the enums & enumitems in temporary sessions!!! (like in remotes)
 		the order of the enum & enumitem table is not guaranteed to be consistent between
 		every session thus you will definitely encounter bugs if you use this for saving data
